@@ -1,0 +1,52 @@
+.diagram {
+    position: relative;
+    overflow: hidden;
+    resize: both;
+}
+
+.diagram > div, .diagram > svg {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+table.entity {
+    position: absolute;
+    border: thin solid black;
+    border-collapse: collapse;
+    font-family: sans-serif;
+    font-size: small;
+}
+
+table.entity .hidden {
+    display: none;
+}
+
+table.entity > thead > tr:first-child {
+    background-color: beige;
+}
+
+table.entity > thead span.toggle {
+    width: 10px;
+    height: 10px;
+    float: right;
+    background-color: white;
+    margin: 2px;
+    border: thin solid black;
+}
+
+table.entity > tbody > tr:nth-child(odd) {
+    background-color: white;
+}
+
+table.entity > tbody > tr:nth-child(even) {
+    background-color: lightgray;
+}
+
+table.entity td {
+    border: thin solid black;
+}
+
+table.entity span.entity-property-name {
+    font-weight: bold;
+}

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Entity Relationship Diagram demo</title>
+    <script src="erdiagram.js" defer="defer"></script>
+    <link rel="stylesheet" type="text/css" href="erdiagram.css" />
+
+    <script defer="defer">
+        document.addEventListener("DOMContentLoaded", () => {
+            let city = new Entity({
+                name: "City",
+                properties: [
+                    { name: "id", type: "int" },
+                    { name: "name", type: "string" },
+                ]
+            });
+            let address = new Entity({
+                name: "Address",
+                properties: [
+                    { name: "id", type: "bigint" },
+                    { name: "zip", type: "decimal(4)" },
+                    { name: "city_id", type: "int" },
+                    { name: "street", type: "string" },
+                    { name: "number", type: "decimal" },
+                ]
+            });
+            let person = new Entity({
+                name: "Person",
+                properties: [
+                    { name: "id", type: "bigint" },
+                    { name: "family_name", type: "string" },
+                    { name: "given_name", type: "string" },
+                    { name: "perm_address_id", type: "bigint" },
+                    { name: "temp_address_id", type: "bigint" },
+                    { name: "manager_id", type: "bigint" },
+                ]
+            });
+
+            diagram = new Diagram(document.getElementById("diagram"));
+            diagram.addElement(city.element);
+            diagram.addElement(address.element);
+            diagram.addElement(person.element);
+            diagram.addConnector(new Arrow(address.sub("city_id"), city.sub("id")));
+            diagram.addConnector(new Arrow(person.sub("perm_address_id"), address.sub("id")));
+            diagram.addConnector(new Arrow(person.sub("temp_address_id"), address.sub("id")));
+            diagram.addConnector(new Arrow(person.sub("manager_id"), person.sub("id")));
+            diagram.shuffle();
+
+            let options = {
+                charge: number = 1000,
+                stiffness: number = 0.1,
+                drag: number = 0.1,
+                gravity: number = 0.25,
+                iterations: 500
+            };
+            let layout = new ForceLayout(options, diagram.getHost(), diagram.getChildren(), (elem1, elem2) => { return diagram.isConnected(elem1, elem2) });
+            layout.start();
+        });
+    </script>
+</head>
+
+<body>
+    <div id="diagram" class="diagram" style="border: thin black solid; width: 800px; height: 400px;"></div>
+</body>
+
+</html>

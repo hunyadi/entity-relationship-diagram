@@ -1,0 +1,25 @@
+{
+    "compilerOptions": {
+        "target": "ES2016",
+        "module": "commonjs",
+        "allowUnreachableCode": false,
+        "allowUnusedLabels": false,
+        "experimentalDecorators": true,
+        "lib": [
+            "DOM",
+            "ES2016"
+        ],
+        "noImplicitOverride": true,
+        "noImplicitReturns": true,
+        "noPropertyAccessFromIndexSignature": true,
+        "noUncheckedIndexedAccess": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "preserveConstEnums": true,
+        "strict": true,
+        "suppressImplicitAnyIndexErrors": true
+    },
+    "files": [
+        "erdiagram.ts"
+    ]
+}
