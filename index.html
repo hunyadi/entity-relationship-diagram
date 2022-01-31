@@ -4,11 +4,11 @@
 <head>
     <meta charset="utf-8" />
     <title>Entity Relationship Diagram demo</title>
-    <script src="erdiagram.js" defer="defer"></script>
     <link rel="stylesheet" type="text/css" href="erdiagram.css" />
+    <script src="erdiagram.js" defer="defer"></script>
 
     <script defer="defer">
-        document.addEventListener("DOMContentLoaded", () => {
+        function getSimpleSetup(diagram) {
             let city = new Entity({
                 name: "City",
                 properties: [
@@ -38,7 +38,6 @@
                 ]
             });
 
-            diagram = new Diagram(document.getElementById("diagram"));
             diagram.addElement(city.element);
             diagram.addElement(address.element);
             diagram.addElement(person.element);
@@ -46,13 +45,43 @@
             diagram.addConnector(new Arrow(person.sub("perm_address_id"), address.sub("id")));
             diagram.addConnector(new Arrow(person.sub("temp_address_id"), address.sub("id")));
             diagram.addConnector(new Arrow(person.sub("manager_id"), person.sub("id")));
+        }
+
+        function getComplexSetup(diagram) {
+            let entities = [];
+
+            for (let i = 0; i < 20; ++i) {
+                let entity = new Entity({
+                    name: "entity" + i,
+                    properties: [
+                        { name: "a", type: "T1" },
+                        { name: "b", type: "T2" },
+                        { name: "c", type: "T3" }
+                    ]
+                });
+                entities.push(entity);
+                diagram.addElement(entity.element);
+            }
+
+            for (let i = 0; i < 20; ++i) {
+                for (let j = 0; j < 20; ++j) {
+                    if (Math.random() > 0.9) {
+                        diagram.addConnector(new Arrow(entities[i].sub("a"), entities[j].sub("a")));
+                    }
+                }
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            diagram = new Diagram(document.getElementById("diagram"));
+            getComplexSetup(diagram);
             diagram.shuffle();
 
             let options = {
                 charge: number = 1000,
-                stiffness: number = 0.1,
-                drag: number = 0.1,
-                gravity: number = 0.25,
+                stiffness: number = 0.2,
+                drag: number = 0.5,
+                gravity: number = 2.0,
                 iterations: 500
             };
             let layout = new ForceLayout(options, diagram.getHost(), diagram.getChildren(), (elem1, elem2) => { return diagram.isConnected(elem1, elem2) });

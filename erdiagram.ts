@@ -100,53 +100,50 @@ function isDescendant(ancestor: Node, node: Node): boolean {
     return (node.compareDocumentPosition(ancestor) & Node.DOCUMENT_POSITION_CONTAINS) != 0;
 }
 
-/**
- * Finds the first visible ancestor element of a child element, or returns a root element if none is found.
- * @param element The element whose first visible ancestor to seek.
- * @returns The first element in the hierarchy that is visible (i.e. CSS `display` is not `none`), or the root element.
- */
-function getFirstVisibleAncestor(element: HTMLElement): HTMLElement {
-    while (element.parentElement != null && element.offsetParent == null) {
-        element = element.parentElement;
+class VisibilityChecker {
+    private cache = new Map<HTMLElement, HTMLElement>();
+
+    /**
+     * Finds the first visible ancestor element of a child element, or returns a root element if none is found.
+     * @param element The element whose first visible ancestor to seek.
+     * @returns The first element in the hierarchy that is visible (i.e. CSS `display` is not `none`), or the root element.
+     */
+    getFirstVisibleAncestor(element: HTMLElement): HTMLElement {
+        const ancestor = this.cache.get(element);
+        if (ancestor) {
+            return ancestor;
+        }
+
+        let e = element;
+        while (e.offsetParent == null && e.parentElement != null) {
+            e = e.parentElement;
+        }
+        this.cache.set(element, e);
+        return e;
     }
-    return element;
 }
 
 /**
- * Returns the coordinates of an element relative to its closest positioned ancestor.
+ * Transforms the position of an element to a reference coordinate system.
+ * The reference coordinate system is specified relative to the viewport.
  * @param element The HTML element whose position to find.
- * @returns The position of the element w.r.t. its offset parent.
+ * @returns The position of the element w.r.t. the reference system.
  */
-function getOffsetPosition(element: HTMLElement): Coordinate {
+function getOffsetPosition(element: HTMLElement, ref: Point): Coordinate {
     const rect = element.getBoundingClientRect();
-    if (element.offsetParent) {
-        const parentRect = element.offsetParent.getBoundingClientRect()
-        return new Point(rect.x - parentRect.x, rect.y - parentRect.y);
-    } else {
-        return new Point(rect.x, rect.y);
-    }
+    return new Point(rect.x - ref.x, rect.y - ref.y);
 }
 
-function getOffsetCenter(element: HTMLElement): Coordinate {
+function getOffsetCenter(element: HTMLElement, ref: Point): Coordinate {
     const rect = element.getBoundingClientRect();
     const midX = (rect.right + rect.left) / 2;
     const midY = (rect.bottom + rect.top) / 2;
-    if (element.offsetParent) {
-        const parentRect = element.offsetParent.getBoundingClientRect()
-        return new Point(midX - parentRect.x, midY - parentRect.y);
-    } else {
-        return new Point(midX, midY);
-    }
+    return new Point(midX - ref.x, midY - ref.y);
 }
 
-function getOffsetRect(element: HTMLElement): Rect {
+function getOffsetRect(element: HTMLElement, ref: Point): Rect {
     const rect = element.getBoundingClientRect();
-    if (element.offsetParent) {
-        const parentRect = element.offsetParent.getBoundingClientRect()
-        return new Rect(rect.left - parentRect.left, rect.top - parentRect.top, rect.right - parentRect.right, rect.bottom - parentRect.bottom);
-    } else {
-        return new Rect(rect.left, rect.top, rect.right, rect.bottom);
-    }
+    return new Rect(rect.left - ref.x, rect.top - ref.y, rect.right - ref.x, rect.bottom - ref.y);
 }
 
 function createSVGElement(typeName: string): SVGElement {
@@ -190,7 +187,7 @@ abstract class Connector extends Shape {
     }
 
     /** Redraws the connector. */
-    abstract draw(diagram: Diagram): void;
+    abstract draw(diagram: Diagram, checker: VisibilityChecker): void;
 }
 
 class Diagram {
@@ -221,13 +218,13 @@ class Diagram {
      */
     constructor(private container: HTMLElement) {
         this.svg = createSVGElement('svg') as SVGSVGElement;
-        this.svg.innerHTML = `<defs><marker id="arrowhead" markerWidth="${this.markerWidth}" markerHeight="${this.markerHeight}" refX="0" refY="${this.markerHeight / 2}" orient="auto"><polygon points="0 0, ${this.markerWidth} ${this.markerHeight / 2}, 0 ${this.markerHeight}" /></marker></defs>`;
+        this.svg.innerHTML = `<defs><marker id="arrowhead" markerWidth="${this.markerWidth}" markerHeight="${this.markerHeight}" refX="${this.markerWidth}" refY="${this.markerHeight / 2}" orient="auto"><polygon points="0 0, ${this.markerWidth} ${this.markerHeight / 2}, 0 ${this.markerHeight}" /></marker></defs>`;
         container.append(this.svg);
         this.host = document.createElement("div");
         container.append(this.host);
 
         this.resizeObserver = new ResizeObserver(entries => {
-            this.connectors.filter(connector => {
+            const connectors = this.connectors.filter(connector => {
                 for (let entry of entries) {
                     const element = entry.target;
 
@@ -236,24 +233,24 @@ class Diagram {
                     }
                 }
                 return false;
-            }).forEach(connector => {
-                // redraw a connector if one of its endpoint elements has changed size
-                connector.draw(this);
             });
+
+            // redraw a connector if one of its endpoint elements has changed size
+            this.redraw(connectors);
         });
 
         this.styleObserver = new MutationObserver(mutationList => {
             mutationList.forEach(mutation => {
                 switch (mutation.attributeName) {
                     case 'style':
-                        this.connectors.filter(connector => {
+                        const connectors = this.connectors.filter(connector => {
                             const element = mutation.target as HTMLElement;
                             return connector.source == element || connector.target == element ||
                                 isDescendant(element, connector.source) || isDescendant(element, connector.target);
-                        }).forEach(connector => {
-                            // redraw a connector if one of its endpoint elements has changed size
-                            connector.draw(this);
                         });
+
+                        // redraw a connector if one of its endpoint elements has changed size
+                        this.redraw(connectors);
                         break;
                 }
             });
@@ -368,12 +365,24 @@ class Diagram {
 
     shuffle(): void {
         this.getChildren().forEach(elem => {
-            const outerRect = this.host.getBoundingClientRect();
-            const childRect = elem.getBoundingClientRect();
+            const outerWidth = this.host.offsetWidth;
+            const outerHeight = this.host.offsetHeight;
+            const childWidth = elem.offsetWidth;
+            const childHeight = elem.offsetHeight;
 
-            elem.style.left = (Math.random() * (outerRect.width - childRect.width)) + 'px';
-            elem.style.top = (Math.random() * (outerRect.height - childRect.height)) + 'px';
+            elem.style.left = (Math.random() * (outerWidth - childWidth)) + 'px';
+            elem.style.top = (Math.random() * (outerHeight - childHeight)) + 'px';
         });
+    }
+
+    private redraw(connectors: Connector[]) {
+        if (connectors.length > 0) {
+            const checker = new VisibilityChecker();
+            connectors.forEach(connector => {
+                // redraw a connector if one of its endpoint elements has changed size
+                connector.draw(this, checker);
+            });
+        }
     }
 }
 
@@ -390,9 +399,9 @@ class Arrow extends Connector {
         super(path, source, target);
     }
 
-    draw(diagram: Diagram): void {
-        let source: Element = getFirstVisibleAncestor(this.source);
-        let target: Element = getFirstVisibleAncestor(this.target);
+    draw(diagram: Diagram, checker: VisibilityChecker): void {
+        let source: Element = checker.getFirstVisibleAncestor(this.source);
+        let target: Element = checker.getFirstVisibleAncestor(this.target);
 
         if (source == target) {
             this.path.setAttribute('d', '');
@@ -416,11 +425,11 @@ class Arrow extends Connector {
             if (sourceRect.right < targetRect.left) {
                 // rightward pointing arrow
                 sourceX = sourceRect.right;
-                targetX = targetRect.left - diagram.markerWidth;
+                targetX = targetRect.left;
             } else {
                 // leftward pointing arrow
                 sourceX = sourceRect.left;
-                targetX = targetRect.right + diagram.markerWidth;
+                targetX = targetRect.right;
             }
 
             sourcePt = new Point(sourceX, sourceY);
@@ -434,11 +443,11 @@ class Arrow extends Connector {
 
             if (Math.abs(sourceRect.left - targetRect.left) < Math.abs(sourceRect.right - targetRect.right)) {
                 sourceX = sourceRect.left;
-                targetX = targetRect.left - diagram.markerWidth;
+                targetX = targetRect.left;
                 offsetX = -(sourceRect.width + targetRect.width) / 2;
             } else {
                 sourceX = sourceRect.right;
-                targetX = targetRect.right + diagram.markerWidth;
+                targetX = targetRect.right;
                 offsetX = (sourceRect.width + targetRect.width) / 2;
             }
 
@@ -478,7 +487,8 @@ class Movable {
             }, { "capture": true, "once": true });
             document.addEventListener('mousemove', this.mouseMoveListener, true);
 
-            this.elementPos = getOffsetPosition(element);
+            const rect = element.offsetParent!.getBoundingClientRect();
+            this.elementPos = getOffsetPosition(element, new Point(rect.left, rect.top));
         }, true);
     }
 }
@@ -544,9 +554,9 @@ interface ForceLayoutOptions {
 
 class ForceLayoutDefaultOptions implements ForceLayoutOptions {
     readonly charge: number = 1000;
-    readonly stiffness: number = 0.1;
-    readonly drag: number = 0.1;
-    readonly gravity: number = 0.1;
+    readonly stiffness: number = 0.2;
+    readonly drag: number = 0.5;
+    readonly gravity: number = 2.0;
     readonly iterations: number = 250;
 }
 
@@ -594,10 +604,13 @@ class ForceLayout {
     }
 
     private step(elapsed: DOMHighResTimeStamp): boolean {
+        const containerRect = this.canvas.getBoundingClientRect();
+        const containerRef = new Point(containerRect.x, containerRect.y);
+
         this.objects.forEach(obj => {
             let offset = obj.velocity.times(elapsed);
 
-            const objPos = getOffsetPosition(obj.element);
+            const objPos = getOffsetPosition(obj.element, containerRef);
             obj.element.style.left = (objPos.x + offset.x) + 'px';
             obj.element.style.top = (objPos.y + offset.y) + 'px';
         });
@@ -605,12 +618,11 @@ class ForceLayout {
             obj.velocity = obj.force.times(elapsed / obj.mass);
         });
 
-        const containerRect = this.canvas.getBoundingClientRect();
         const centerPos = new Vector(containerRect.width / 2, containerRect.height / 2);
 
         for (let i = 0; i < this.objects.length; ++i) {
             const source = this.objects[i]!;
-            const sourcePos = Vector.from(getOffsetCenter(source.element));
+            const sourcePos = Vector.from(getOffsetCenter(source.element, containerRef));
 
             // attraction to center
             const centerDir = centerPos.minus(sourcePos).normalize();
@@ -623,7 +635,7 @@ class ForceLayout {
 
             for (let j = i + 1; j < this.objects.length; ++j) {
                 const target = this.objects[j]!;
-                const targetPos = Vector.from(getOffsetCenter(target.element));
+                const targetPos = Vector.from(getOffsetCenter(target.element, containerRef));
 
                 const vector = targetPos.minus(sourcePos);
                 const distance = vector.magnitude();
@@ -649,7 +661,7 @@ class ForceLayout {
                 return false;
             }
 
-            const rect = getOffsetRect(obj.element);
+            const rect = getOffsetRect(obj.element, containerRef);
             return rect.left > 0 && rect.top > 0 &&
                 rect.right < containerRect.width && rect.bottom < containerRect.height;
         })
