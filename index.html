@@ -8,7 +8,7 @@
     <script src="erdiagram.js" defer="defer"></script>
 
     <script defer="defer">
-        function getSimpleSetup(diagram) {
+        function getSimpleSetup(entities, relationships) {
             let city = new Entity({
                 name: "City",
                 properties: [
@@ -38,18 +38,14 @@
                 ]
             });
 
-            diagram.addElement(city.element);
-            diagram.addElement(address.element);
-            diagram.addElement(person.element);
-            diagram.addConnector(new Arrow(address.sub("city_id"), city.sub("id")));
-            diagram.addConnector(new Arrow(person.sub("perm_address_id"), address.sub("id")));
-            diagram.addConnector(new Arrow(person.sub("temp_address_id"), address.sub("id")));
-            diagram.addConnector(new Arrow(person.sub("manager_id"), person.sub("id")));
+            entities.push(city, address, person);
+            relationships.push(new EntityRelationship(address.property("city_id"), city.property("id")));
+            relationships.push(new EntityRelationship(person.property("perm_address_id"), address.property("id")));
+            relationships.push(new EntityRelationship(person.property("temp_address_id"), address.property("id")));
+            relationships.push(new EntityRelationship(person.property("manager_id"), person.property("id")));
         }
 
-        function getComplexSetup(diagram) {
-            let entities = [];
-
+        function getComplexSetup(entities, relationships) {
             for (let i = 0; i < 20; ++i) {
                 let entity = new Entity({
                     name: "entity" + i,
@@ -60,38 +56,61 @@
                     ]
                 });
                 entities.push(entity);
-                diagram.addElement(entity.element);
             }
 
             for (let i = 0; i < 20; ++i) {
                 for (let j = 0; j < 20; ++j) {
                     if (Math.random() > 0.9) {
-                        diagram.addConnector(new Arrow(entities[i].sub("a"), entities[j].sub("a")));
+                        relationships.push(new EntityRelationship(entities[i].property("a"), entities[j].property("b")));
                     }
                 }
             }
         }
 
-        document.addEventListener("DOMContentLoaded", () => {
-            diagram = new Diagram(document.getElementById("diagram"));
-            getComplexSetup(diagram);
-            diagram.shuffle();
+        function displayElasticDiagram(entities, relationships) {
+            diagram = new ElasticEntityDiagram(document.getElementById("elastic-diagram"), entities, relationships);
+            diagram.layout({
+                charge: 1000,
+                stiffness: 0.2,
+                drag: 0.5,
+                gravity: 2.0,
+                iterations: 500,
+            });
+        }
 
-            let options = {
-                charge: number = 1000,
-                stiffness: number = 0.2,
-                drag: number = 0.5,
-                gravity: number = 2.0,
-                iterations: 500
-            };
-            let layout = new ForceLayout(options, diagram.getHost(), diagram.getChildren(), (elem1, elem2) => { return diagram.isConnected(elem1, elem2) });
-            layout.start();
+        function displayNavigableDiagram(entities, relationships) {
+            diagram = new NavigableEntityDiagram(document.getElementById("navigable-diagram"), entities, relationships);
+            diagram.show(entities[2]);
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            let entities = [];
+            let relationships = [];
+            getComplexSetup(entities, relationships);
+
+            displayElasticDiagram(entities, relationships);
+            //displayNavigableDiagram(entities, relationships);
         });
     </script>
 </head>
 
 <body>
-    <div id="diagram" class="diagram" style="border: thin black solid; width: 800px; height: 400px;"></div>
+    <div id="elastic-diagram" class="diagram"
+        style="border: thin black solid; box-sizing: border-box; width: 90vw; height: 90vh;">
+    </div>
+
+    <!--
+    <div id="navigable-diagram" class="diagram"
+        style="border: thin black solid; box-sizing: border-box; width: 90vw; height: 90vh;">
+        <div class="navigator">
+            <div class="left"></div>
+            <div class="center">
+                <select></select>
+            </div>
+            <div class="right"></div>
+        </div>
+    </div>
+    -->
 </body>
 
 </html>

@@ -10,8 +10,13 @@
     height: 100%;
 }
 
+.diagram.elastic > div > * {
+    margin: 0;
+}
+
 table.entity {
     position: absolute;
+    box-sizing: border-box;
     border: thin solid black;
     border-collapse: collapse;
     font-family: sans-serif;
@@ -49,4 +54,28 @@ table.entity td {
 
 table.entity span.entity-property-name {
     font-weight: bold;
+}
+
+.navigator {
+    display: flex;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    align-items: stretch;
+    justify-content: center;
+}
+
+.navigator > div {
+    flex: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.navigator > div > * {
+    position: unset;
+    margin: 5px;
 }

@@ -197,6 +197,9 @@ class Diagram {
     /** The SVG element that encapsulates connectors in a separate layer. */
     private svg: SVGSVGElement;
 
+    /** Set of all elements. */
+    private elements: HTMLElement[] = [];
+
     /** Set of all connectors. */
     private connectors: Connector[] = [];
 
@@ -217,11 +220,22 @@ class Diagram {
      * @param svg 
      */
     constructor(private container: HTMLElement) {
+        const fragment = document.createDocumentFragment();
+        Array.from(container.children).forEach(child => {
+            fragment.append(child);
+        })
+
         this.svg = createSVGElement('svg') as SVGSVGElement;
         this.svg.innerHTML = `<defs><marker id="arrowhead" markerWidth="${this.markerWidth}" markerHeight="${this.markerHeight}" refX="${this.markerWidth}" refY="${this.markerHeight / 2}" orient="auto"><polygon points="0 0, ${this.markerWidth} ${this.markerHeight / 2}, 0 ${this.markerHeight}" /></marker></defs>`;
         container.append(this.svg);
         this.host = document.createElement("div");
         container.append(this.host);
+        this.host.append(fragment);
+
+        const observer = new ResizeObserver(() => {
+            this.redraw(this.connectors);
+        });
+        observer.observe(this.host);
 
         this.resizeObserver = new ResizeObserver(entries => {
             const connectors = this.connectors.filter(connector => {
@@ -274,7 +288,8 @@ class Diagram {
             });
             this.connectors = this.connectors.filter(connector => !unattachedConnectors.has(connector));
         });
-        this.childObserver.observe(container, { subtree: true, childList: true });
+
+        this.clear();
     }
 
     isConnectedTo(source: HTMLElement, target: HTMLElement): boolean {
@@ -289,10 +304,10 @@ class Diagram {
     }
 
     addElement(element: HTMLElement): void {
+        this.elements.push(element);
         if (!isDescendant(this.host, element)) {
             this.host.append(element);
         }
-        new Movable(element);
     }
 
     addConnector(connector: Connector): void {
@@ -318,10 +333,39 @@ class Diagram {
         // listen to events on positioned ancestors to handle case when element moves with its container
         this.getPositionedAncestors(connector.source).forEach(ancestor => {
             this.styleObserver.observe(ancestor, { attributeFilter: ["style"] });
-        })
+        });
         this.getPositionedAncestors(connector.target).forEach(ancestor => {
             this.styleObserver.observe(ancestor, { attributeFilter: ["style"] });
-        })
+        });
+    }
+
+    removeConnector(connector: Connector): void {
+        const connectors = this.connectors.filter(c => c !== connector);
+        connector.remove();
+        this.resizeObserver.disconnect();
+        this.styleObserver.disconnect();
+
+        connectors.forEach(connector => {
+            this.addConnector(connector);
+        });
+    }
+
+    clear(): void {
+        this.childObserver.disconnect();
+
+        this.connectors.forEach(connector => {
+            connector.remove();
+        });
+        this.resizeObserver.disconnect();
+        this.styleObserver.disconnect();
+        this.connectors = [];
+
+        this.elements.forEach(element => {
+            element.remove();
+        });
+        this.elements = [];
+
+        this.childObserver.observe(this.container, { subtree: true, childList: true });
     }
 
     /**
@@ -359,12 +403,9 @@ class Diagram {
         return this.host;
     }
 
-    getChildren(): HTMLElement[] {
-        return Array.from(this.host.children) as HTMLElement[]
-    }
-
     shuffle(): void {
-        this.getChildren().forEach(elem => {
+        Array.from(this.host.children).forEach(child => {
+            const elem = child as HTMLElement;
             const outerWidth = this.host.offsetWidth;
             const outerHeight = this.host.offsetHeight;
             const childWidth = elem.offsetWidth;
@@ -487,10 +528,13 @@ class Movable {
             }, { "capture": true, "once": true });
             document.addEventListener('mousemove', this.mouseMoveListener, true);
 
-            const rect = element.offsetParent!.getBoundingClientRect();
-            this.elementPos = getOffsetPosition(element, new Point(rect.left, rect.top));
+            this.elementPos = new Point(element.offsetLeft, element.offsetTop);
         }, true);
     }
+}
+
+interface Renderable {
+    get element(): Element;
 }
 
 interface EntityProperty {
@@ -503,13 +547,29 @@ interface EntityDescriptor {
     readonly properties: EntityProperty[];
 }
 
+class EntityElement implements Renderable {
+    private elem: HTMLTableCellElement;
+
+    constructor(private entity: Entity, propertyName: string) {
+        this.elem = entity.element.querySelector(`td[data-property="${propertyName}"]`)!;
+    }
+
+    public get element(): HTMLElement {
+        return this.elem;
+    }
+
+    public get parent(): Entity {
+        return this.entity;
+    }
+}
+
 /**
  * Represents an entity in an entity relationship diagram (ERD).
  */
-class Entity {
+class Entity implements Renderable {
     private elem: HTMLTableElement;
 
-    constructor(descriptor: EntityDescriptor) {
+    constructor(private descriptor: EntityDescriptor) {
         this.elem = document.createElement('table');
         this.elem.classList.add("entity");
         const rows = descriptor.properties.map(property => {
@@ -527,13 +587,21 @@ class Entity {
         });
     }
 
+    public get name(): string {
+        return this.descriptor.name;
+    }
+
     public get element(): HTMLElement {
         return this.elem;
     }
 
-    sub(id: string): HTMLElement {
-        return this.elem.querySelector(`[data-property="${id}"]`)!;
+    property(id: string): EntityElement {
+        return new EntityElement(this, id);
     }
+}
+
+class EntityRelationship {
+    constructor(public source: EntityElement, public target: EntityElement) { }
 }
 
 /** A function that returns if two elements are connected. */
@@ -682,5 +750,102 @@ class ForceLayout {
 
         this.lastTimestamp = timestamp;
         window.requestAnimationFrame(this.tick.bind(this));
+    }
+}
+
+class EntityDiagram {
+    protected diagram: Diagram;
+
+    constructor(elem: HTMLElement, protected entities: Entity[], protected relationships: EntityRelationship[]) {
+        this.diagram = new Diagram(elem);
+        elem.classList.add("diagram");
+    }
+}
+
+class ElasticEntityDiagram extends EntityDiagram {
+    constructor(elem: HTMLElement, entities: Entity[], relationships: EntityRelationship[]) {
+        super(elem, entities, relationships);
+        elem.classList.add("elastic");
+    }
+
+    layout(options: ForceLayoutOptions): void {
+        this.entities.forEach(entity => {
+            this.diagram.addElement(entity.element);
+            new Movable(entity.element);
+        });
+        this.relationships.forEach(relationship => {
+            this.diagram.addConnector(new Arrow(relationship.source.element, relationship.target.element));
+        });
+        this.diagram.shuffle();
+
+        let layout = new ForceLayout(options,
+            this.diagram.getHost(),
+            this.entities.map(entity => { return entity.element }),
+            (elem1, elem2) => { return this.diagram.isConnected(elem1, elem2) }
+        );
+        layout.start();
+    }
+}
+
+class NavigableEntityDiagram extends EntityDiagram {
+    constructor(elem: HTMLElement, entities: Entity[], relationships: EntityRelationship[]) {
+        super(elem, entities, relationships);
+        elem.classList.add("navigable");
+        const selector = this.diagram.getHost().querySelector("select")!
+
+        this.entities.forEach(entity => {
+            const option = document.createElement("option");
+            option.innerText = entity.name;
+            selector.append(option);
+        });
+        selector.addEventListener("change", () => {
+            const selected = this.entities.find(entity => {
+                return entity.name == selector.value;
+            });
+            if (selected) {
+                this.show(selected);
+            }
+        });
+    }
+
+    show(entity: Entity): void {
+        this.diagram.clear();
+
+        const leftPanel = this.diagram.getHost().querySelector(".left")!
+        const centerPanel = this.diagram.getHost().querySelector(".center")!
+        const rightPanel = this.diagram.getHost().querySelector(".right")!
+
+        const visible = new Set<Entity>();
+
+        centerPanel.append(entity.element);
+        this.diagram.addElement(entity.element);
+
+        // add entities to diagram connected by a relationship
+        this.relationships.forEach(relationship => {
+            let updated = false;
+            if (relationship.source.parent == entity && relationship.target.parent == entity) {
+                updated = true;
+            } else if (relationship.target.parent == entity) {
+                const e = relationship.source.parent;
+                if (!visible.has(e)) {
+                    leftPanel.append(e.element);
+                    this.diagram.addElement(e.element);
+                    visible.add(e);
+                }
+                updated = true;
+            } else if (relationship.source.parent == entity) {
+                const e = relationship.target.parent;
+                if (!visible.has(e)) {
+                    rightPanel.append(e.element);
+                    this.diagram.addElement(e.element);
+                    visible.add(e);
+                }
+                updated = true;
+            }
+
+            if (updated) {
+                this.diagram.addConnector(new Arrow(relationship.source.element, relationship.target.element));
+            }
+        });
     }
 }
