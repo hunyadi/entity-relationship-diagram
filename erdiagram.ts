@@ -315,29 +315,8 @@ class Diagram {
         this.connectors.push(connector);
         this.svg.appendChild(connector.element);
 
-        // trigger redraw if endpoint element size changes
-        this.resizeObserver.observe(connector.source);
-        this.resizeObserver.observe(connector.target);
-
-        // listen to events on closest positioned ancestor to handle left/top expressed as percentage
-        if (connector.source.offsetParent) {
-            this.resizeObserver.observe(connector.source.offsetParent);
-        }
-        if (connector.target.offsetParent) {
-            this.resizeObserver.observe(connector.target.offsetParent);
-        }
-
-        // trigger redraw if endpoint element position changes
-        this.styleObserver.observe(connector.source, { attributeFilter: ["style"] });
-        this.styleObserver.observe(connector.target, { attributeFilter: ["style"] });
-
-        // listen to events on positioned ancestors to handle case when element moves with its container
-        this.getPositionedAncestors(connector.source).forEach(ancestor => {
-            this.styleObserver.observe(ancestor, { attributeFilter: ["style"] });
-        });
-        this.getPositionedAncestors(connector.target).forEach(ancestor => {
-            this.styleObserver.observe(ancestor, { attributeFilter: ["style"] });
-        });
+        this.observeConnectorEndpoint(connector.source);
+        this.observeConnectorEndpoint(connector.target);
     }
 
     removeConnector(connector: Connector): void {
@@ -367,6 +346,24 @@ class Diagram {
         this.elements = [];
 
         this.childObserver.observe(this.container, { subtree: true, childList: true });
+    }
+
+    private observeConnectorEndpoint(element: HTMLElement): void {
+        // trigger redraw if endpoint element size changes
+        this.resizeObserver.observe(element);
+
+        // listen to events on closest positioned ancestor to handle left/top expressed as percentage
+        if (element.offsetParent) {
+            this.resizeObserver.observe(element.offsetParent);
+        }
+
+        // trigger redraw if endpoint element position changes
+        this.styleObserver.observe(element, { attributeFilter: ["style"] });
+
+        // listen to events on positioned ancestors to handle case when element moves with its container
+        this.getPositionedAncestors(element).forEach(ancestor => {
+            this.styleObserver.observe(ancestor, { attributeFilter: ["style"] });
+        });
     }
 
     /**
@@ -585,6 +582,7 @@ class Entity implements Renderable {
         const body = this.elem.querySelector('tbody')!;
         toggle.addEventListener('click', (event) => {
             event.preventDefault();
+            event.stopPropagation();
             body.classList.toggle("hidden");
         });
     }
@@ -595,6 +593,10 @@ class Entity implements Renderable {
 
     public get element(): HTMLElement {
         return this.elem;
+    }
+
+    public get head(): HTMLElement {
+        return this.elem.querySelector("thead")!;
     }
 
     property(id: string): EntityElement {
@@ -807,6 +809,11 @@ class NavigableEntityDiagram extends EntityDiagram {
         this.selector = this.diagram.getHost().querySelector("select")!;
 
         this.entities.forEach(entity => {
+            entity.head.addEventListener("click", event => {
+                event.preventDefault();
+                this.show(entity);
+            })
+
             const option = document.createElement("option");
             option.innerText = entity.name;
             this.selector.append(option);
