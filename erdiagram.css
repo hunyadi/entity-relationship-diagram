@@ -1,7 +1,43 @@
+body {
+    margin: 0;
+    padding: 0;
+}
+
+body > .tab-panel {
+    box-sizing: border-box;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.tab-panel > .tab-selector > * {
+    display: inline-block;
+    margin: 3px 0;
+    border: black solid thin;
+    padding: 2px;
+    cursor: pointer;
+}
+
+.tab-panel > .tab-view {
+    flex: 1;
+}
+
+.tab-view > * {
+    visibility: hidden;
+    position: absolute !important;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+}
+
+.tab-view > .tab-active {
+    visibility: visible;
+}
+
 .diagram {
     position: relative;
     overflow: hidden;
-    resize: both;
 }
 
 .diagram > div, .diagram > svg {

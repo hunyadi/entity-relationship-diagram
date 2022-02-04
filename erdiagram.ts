@@ -212,6 +212,7 @@ class Diagram {
     /** Listens to removing elements from the diagram. */
     private childObserver: MutationObserver;
 
+    readonly markerId: string = Math.floor(Math.random() * Math.pow(36, 6)).toString(36);
     readonly markerWidth: number = 10;
     readonly markerHeight: number = 7;
 
@@ -226,7 +227,7 @@ class Diagram {
         })
 
         this.svg = createSVGElement('svg') as SVGSVGElement;
-        this.svg.innerHTML = `<defs><marker id="arrowhead" markerWidth="${this.markerWidth}" markerHeight="${this.markerHeight}" refX="${this.markerWidth}" refY="${this.markerHeight / 2}" orient="auto"><polygon points="0 0, ${this.markerWidth} ${this.markerHeight / 2}, 0 ${this.markerHeight}" /></marker></defs>`;
+        this.svg.innerHTML = `<defs><marker id="${this.markerId}" markerWidth="${this.markerWidth}" markerHeight="${this.markerHeight}" refX="${this.markerWidth}" refY="${this.markerHeight / 2}" orient="auto"><polygon points="0 0, ${this.markerWidth} ${this.markerHeight / 2}, 0 ${this.markerHeight}" /></marker></defs>`;
         container.append(this.svg);
         this.host = document.createElement("div");
         container.append(this.host);
@@ -436,7 +437,6 @@ class Arrow extends Connector {
         const path = createSVGElement('path') as SVGSVGElement;
         path.setAttribute('stroke', 'black');
         path.setAttribute('fill', 'transparent');
-        path.setAttribute('marker-end', 'url(#arrowhead)');
         super(path, source, target);
     }
 
@@ -445,7 +445,8 @@ class Arrow extends Connector {
         let target: Element = checker.getFirstVisibleAncestor(this.target);
 
         if (source == target) {
-            this.path.setAttribute('d', '');
+            this.path.removeAttribute('d');
+            this.path.removeAttribute('marker-end');
             return;
         }
 
@@ -501,6 +502,7 @@ class Arrow extends Connector {
 
         const curve = `M${sourcePt.x} ${sourcePt.y} C${sourceCtlPt.x} ${sourceCtlPt.y} ${targetCtlPt.x} ${targetCtlPt.y} ${targetPt.x} ${targetPt.y}`;
         this.path.setAttribute('d', curve);
+        this.path.setAttribute('marker-end', `url(#${diagram.markerId})`);
     }
 }
 
@@ -652,6 +654,7 @@ class ForceLayoutObject {
 class ForceLayout {
     private objects: ForceLayoutObject[];
     private lastTimestamp: DOMHighResTimeStamp = 0;
+    private running: boolean = false;
 
     constructor(private options: ForceLayoutOptions, private canvas: HTMLElement, elements: HTMLElement[], private isConnectedFunc: ConnectedFunction) {
         this.objects = elements.map(element => {
@@ -659,16 +662,24 @@ class ForceLayout {
         });
     }
 
-    start(): void {
+    initialize(): void {
         this.step(0.1);
         for (let k = 0; k < this.options.iterations; ++k) {
             if (this.step(0.1)) {
                 return;
             }
         }
+        this.running = false;
+    }
 
+    start(): void {
+        this.running = true;
         this.lastTimestamp = performance.now();
         window.requestAnimationFrame(this.tick.bind(this));
+    }
+
+    stop(): void {
+        this.running = false;
     }
 
     private step(elapsed: DOMHighResTimeStamp): boolean {
@@ -744,7 +755,7 @@ class ForceLayout {
             elapsed -= 0.1;
         }
 
-        if (this.step(elapsed)) {
+        if (!this.running || this.step(elapsed)) {
             return;
         }
 
@@ -783,37 +794,47 @@ class ElasticEntityDiagram extends EntityDiagram {
             this.entities.map(entity => { return entity.element }),
             (elem1, elem2) => { return this.diagram.isConnected(elem1, elem2) }
         );
-        layout.start();
+        layout.initialize();
     }
 }
 
 class NavigableEntityDiagram extends EntityDiagram {
+    private selector: HTMLSelectElement;
+
     constructor(elem: HTMLElement, entities: Entity[], relationships: EntityRelationship[]) {
         super(elem, entities, relationships);
         elem.classList.add("navigable");
-        const selector = this.diagram.getHost().querySelector("select")!
+        this.selector = this.diagram.getHost().querySelector("select")!;
 
         this.entities.forEach(entity => {
             const option = document.createElement("option");
             option.innerText = entity.name;
-            selector.append(option);
+            this.selector.append(option);
         });
-        selector.addEventListener("change", () => {
+        this.selector.addEventListener("change", () => {
             const selected = this.entities.find(entity => {
-                return entity.name == selector.value;
+                return entity.name == this.selector.value;
             });
             if (selected) {
-                this.show(selected);
+                this.display(selected);
             }
         });
+        if (this.entities.length > 0) {
+            this.display(this.entities[0]!);
+        }
     }
 
     show(entity: Entity): void {
+        this.selector.value = entity.name;
+        this.display(entity);
+    }
+
+    private display(entity: Entity): void {
         this.diagram.clear();
 
-        const leftPanel = this.diagram.getHost().querySelector(".left")!
-        const centerPanel = this.diagram.getHost().querySelector(".center")!
-        const rightPanel = this.diagram.getHost().querySelector(".right")!
+        const leftPanel = this.diagram.getHost().querySelector(".left")!;
+        const centerPanel = this.diagram.getHost().querySelector(".center")!;
+        const rightPanel = this.diagram.getHost().querySelector(".right")!;
 
         const visible = new Set<Entity>();
 
@@ -847,5 +868,93 @@ class NavigableEntityDiagram extends EntityDiagram {
                 this.diagram.addConnector(new Arrow(relationship.source.element, relationship.target.element));
             }
         });
+    }
+}
+
+class EntityGraph {
+    /** Maps entities to their neighbors. */
+    private graph = new Map<Entity, Set<Entity>>();
+
+    constructor(relationships: EntityRelationship[]) {
+        relationships.forEach(relationship => {
+            const source = relationship.source.parent;
+            const target = relationship.target.parent;
+            if (source !== target) {  // ignore loops to self
+                let neighbors = this.graph.get(source);
+                if (neighbors !== undefined) {
+                    neighbors.add(target);  // ignore parallel edges to same node
+                } else {
+                    neighbors = new Set();
+                    neighbors.add(target);  // ignore parallel edges to same node
+                    this.graph.set(source, neighbors);
+                }
+            }
+        });
+    }
+
+    shortestPath(source: Entity, target: Entity): Entity[] | undefined {
+        const queue: Entity[] = [source];
+        const predecessor = new Map<Entity, Entity>();
+        const visited = new Set<Entity>();
+        visited.add(source);
+
+        while (queue.length > 0) {
+            const u = queue.shift()!;
+            const neighbors = this.graph.get(u);
+            if (!neighbors) {
+                continue;
+            }
+
+            for (const v of neighbors) {
+                if (visited.has(v)) {
+                    continue;
+                }
+
+                visited.add(v);
+                if (v === target) {  // check if the path is complete
+                    let path = [v];
+
+                    // backtrack through the path
+                    let p = u;
+                    while (p !== source) {
+                        path.push(p);
+                        p = predecessor.get(p)!;
+                    }
+                    path.push(p);
+                    path.reverse();
+                    return path;
+                }
+
+                predecessor.set(v, u);
+                queue.push(v);
+            }
+        }
+        return undefined;
+    }
+}
+
+class TabView {
+    private view: HTMLElement;
+
+    constructor(panel: HTMLElement) {
+        this.view = panel.querySelector(".tab-view")!;
+
+        const selector = panel.querySelector(".tab-selector")!;
+        Array.from(selector.children).forEach(child => {
+            child.addEventListener("click", event => {
+                const selected = event.target as HTMLElement;
+                this.activate(selected.dataset["tab"]);
+            })
+        });
+    }
+
+    activate(tag: string | undefined) {
+        Array.from(this.view.children).forEach(child => {
+            child.classList.remove("tab-active");
+        });
+        const pane = this.view.querySelector('[data-tab="' + tag + '"]');
+        if (pane) {
+            pane.classList.add("tab-active");
+        }
     }
 }

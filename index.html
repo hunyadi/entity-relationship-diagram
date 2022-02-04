@@ -8,7 +8,7 @@
     <script src="erdiagram.js" defer="defer"></script>
 
     <script defer="defer">
-        function getSimpleSetup(entities, relationships) {
+        function getSimpleSetup() {
             let city = new Entity({
                 name: "City",
                 properties: [
@@ -38,14 +38,18 @@
                 ]
             });
 
-            entities.push(city, address, person);
+            const entities = [city, address, person];
+            const relationships = [];
             relationships.push(new EntityRelationship(address.property("city_id"), city.property("id")));
             relationships.push(new EntityRelationship(person.property("perm_address_id"), address.property("id")));
             relationships.push(new EntityRelationship(person.property("temp_address_id"), address.property("id")));
             relationships.push(new EntityRelationship(person.property("manager_id"), person.property("id")));
+
+            return { entities, relationships };
         }
 
-        function getComplexSetup(entities, relationships) {
+        function getComplexSetup() {
+            const entities = [];
             for (let i = 0; i < 20; ++i) {
                 let entity = new Entity({
                     name: "entity" + i,
@@ -58,6 +62,7 @@
                 entities.push(entity);
             }
 
+            const relationships = [];
             for (let i = 0; i < 20; ++i) {
                 for (let j = 0; j < 20; ++j) {
                     if (Math.random() > 0.9) {
@@ -65,9 +70,12 @@
                     }
                 }
             }
+
+            return { entities, relationships };
         }
 
-        function displayElasticDiagram(entities, relationships) {
+        function displayElasticDiagram(setup) {
+            let { entities, relationships } = setup();
             diagram = new ElasticEntityDiagram(document.getElementById("elastic-diagram"), entities, relationships);
             diagram.layout({
                 charge: 1000,
@@ -78,39 +86,44 @@
             });
         }
 
-        function displayNavigableDiagram(entities, relationships) {
+        function displayNavigableDiagram(setup) {
+            let { entities, relationships } = setup();
             diagram = new NavigableEntityDiagram(document.getElementById("navigable-diagram"), entities, relationships);
-            diagram.show(entities[2]);
         }
 
         document.addEventListener("DOMContentLoaded", () => {
-            let entities = [];
-            let relationships = [];
-            getComplexSetup(entities, relationships);
+            const setup = getComplexSetup;
 
-            displayElasticDiagram(entities, relationships);
-            //displayNavigableDiagram(entities, relationships);
+            //console.log(new EntityGraph(relationships).shortestPath(entities[2], entities[0]));
+
+            displayElasticDiagram(setup);
+            displayNavigableDiagram(setup);
+            new TabView(document.getElementById("tab-panel"));
         });
     </script>
 </head>
 
 <body>
-    <div id="elastic-diagram" class="diagram"
-        style="border: thin black solid; box-sizing: border-box; width: 90vw; height: 90vh;">
-    </div>
+    <div id="tab-panel" class="tab-panel">
+        <div class="tab-selector">
+            <span data-tab="elastic">Elastic</span>
+            <span data-tab="navigator">Navigator</span>
+            <span data-tab="path">Shortest path</span>
+        </div>
+        <div class="tab-view">
+            <div id="elastic-diagram" class="diagram tab-active" data-tab="elastic"></div>
 
-    <!--
-    <div id="navigable-diagram" class="diagram"
-        style="border: thin black solid; box-sizing: border-box; width: 90vw; height: 90vh;">
-        <div class="navigator">
-            <div class="left"></div>
-            <div class="center">
-                <select></select>
+            <div id="navigable-diagram" class="diagram" data-tab="navigator">
+                <div class="navigator">
+                    <div class="left"></div>
+                    <div class="center">
+                        <select></select>
+                    </div>
+                    <div class="right"></div>
+                </div>
             </div>
-            <div class="right"></div>
         </div>
     </div>
-    -->
 </body>
 
 </html>
