@@ -4,19 +4,19 @@
 <head>
     <meta charset="utf-8" />
     <title>Entity Relationship Diagram demo</title>
-    <link rel="stylesheet" type="text/css" href="erdiagram.css" />
-    <script src="erdiagram.js" defer="defer"></script>
+    <link rel="stylesheet" type="text/css" href="css/erdiagram.css" />
+    <script src="dist/erdiagram.min.js" defer="defer"></script>
 
     <script defer="defer">
         function getSimpleSetup() {
-            let city = new Entity({
+            let city = erd.createEntity({
                 name: "City",
                 properties: [
                     { name: "id", type: "int" },
                     { name: "name", type: "string" },
                 ]
             });
-            let address = new Entity({
+            let address = erd.createEntity({
                 name: "Address",
                 properties: [
                     { name: "id", type: "bigint" },
@@ -26,7 +26,7 @@
                     { name: "number", type: "decimal" },
                 ]
             });
-            let person = new Entity({
+            let person = erd.createEntity({
                 name: "Person",
                 properties: [
                     { name: "id", type: "bigint" },
@@ -40,10 +40,10 @@
 
             const entities = [city, address, person];
             const relationships = [];
-            relationships.push(new EntityRelationship(address.property("city_id"), city.property("id")));
-            relationships.push(new EntityRelationship(person.property("perm_address_id"), address.property("id")));
-            relationships.push(new EntityRelationship(person.property("temp_address_id"), address.property("id")));
-            relationships.push(new EntityRelationship(person.property("manager_id"), person.property("id")));
+            relationships.push(erd.createRelationship(address.property("city_id"), city.property("id")));
+            relationships.push(erd.createRelationship(person.property("perm_address_id"), address.property("id")));
+            relationships.push(erd.createRelationship(person.property("temp_address_id"), address.property("id")));
+            relationships.push(erd.createRelationship(person.property("manager_id"), person.property("id")));
 
             return { entities, relationships };
         }
@@ -51,7 +51,7 @@
         function getComplexSetup() {
             const entities = [];
             for (let i = 0; i < 20; ++i) {
-                let entity = new Entity({
+                let entity = erd.createEntity({
                     name: "entity" + i,
                     properties: [
                         { name: "a", type: "T1" },
@@ -66,7 +66,7 @@
             for (let i = 0; i < 20; ++i) {
                 for (let j = 0; j < 20; ++j) {
                     if (Math.random() > 0.9) {
-                        relationships.push(new EntityRelationship(entities[i].property("a"), entities[j].property("b")));
+                        relationships.push(erd.createRelationship(entities[i].property("a"), entities[j].property("b")));
                     }
                 }
             }
@@ -75,9 +75,7 @@
         }
 
         function displayElasticDiagram(setup) {
-            let { entities, relationships } = setup();
-            diagram = new ElasticEntityDiagram(document.getElementById("elastic-diagram"), entities, relationships);
-            diagram.layout({
+            diagram = erd.createElasticDiagram(document.getElementById("elastic-diagram"), setup(), {
                 charge: 1000,
                 stiffness: 0.2,
                 drag: 0.5,
@@ -87,18 +85,17 @@
         }
 
         function displayNavigableDiagram(setup) {
-            let { entities, relationships } = setup();
-            diagram = new NavigableEntityDiagram(document.getElementById("navigable-diagram"), entities, relationships);
+            diagram = erd.createNavigableDiagram(document.getElementById("navigable-diagram"), setup());
         }
 
         document.addEventListener("DOMContentLoaded", () => {
-            const setup = getComplexSetup;
+            const setup = getSimpleSetup;
 
             //console.log(new EntityGraph(relationships).shortestPath(entities[2], entities[0]));
 
             displayElasticDiagram(setup);
             displayNavigableDiagram(setup);
-            new TabView(document.getElementById("tab-panel"));
+            new TabPanel(document.getElementById("tab-panel"));
         });
     </script>
 </head>

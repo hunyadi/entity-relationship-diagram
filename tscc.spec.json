@@ -1,0 +1,11 @@
+{
+    "compilerFlags": {
+        "assume_function_wrapper": true,
+        "js_output_file": "dist/erdiagram.min.js",
+        "language_out": "ECMASCRIPT_2016",
+        "output_wrapper_file": "template.js"
+    },
+    "modules": {
+        "out": "src/erdiagram.ts"
+    }
+}

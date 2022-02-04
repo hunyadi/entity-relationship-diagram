@@ -1,5 +1,6 @@
 {
     "compilerOptions": {
+        "outDir": "dist",
         "target": "ES2016",
         "module": "commonjs",
         "allowUnreachableCode": false,
@@ -20,6 +21,6 @@
         "suppressImplicitAnyIndexErrors": true
     },
     "files": [
-        "erdiagram.ts"
+        "src/erdiagram.ts"
     ]
 }
