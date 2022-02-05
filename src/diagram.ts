@@ -66,11 +66,13 @@ export class Diagram {
     /** Listens to source and target element size changes. */
     private resizeObserver: ResizeObserver;
 
-    /** Listens to position changes. */
+    /** Listens to position or visibility changes. */
     private styleObserver: MutationObserver;
 
     /** Listens to removing elements from the diagram. */
     private childObserver: MutationObserver;
+
+    private repainting: boolean = false;
 
     readonly markerId: string = Math.floor(Math.random() * Math.pow(36, 6)).toString(36);
     readonly markerWidth: number = 10;
@@ -84,52 +86,20 @@ export class Diagram {
         const fragment = document.createDocumentFragment();
         Array.from(container.children).forEach(child => {
             fragment.append(child);
-        })
+        });
 
-        this.svg = createSVGElement('svg') as SVGSVGElement;
+        this.svg = createSVGElement("svg") as SVGSVGElement;
         this.svg.innerHTML = `<defs><marker id="${this.markerId}" markerWidth="${this.markerWidth}" markerHeight="${this.markerHeight}" refX="${this.markerWidth}" refY="${this.markerHeight / 2}" orient="auto"><polygon points="0 0, ${this.markerWidth} ${this.markerHeight / 2}, 0 ${this.markerHeight}" /></marker></defs>`;
         container.append(this.svg);
         this.host = document.createElement("div");
         container.append(this.host);
         this.host.append(fragment);
 
-        const observer = new ResizeObserver(() => {
-            this.redraw(this.connectors);
-        });
+        const observer = new ResizeObserver(this.redraw.bind(this));
         observer.observe(this.host);
 
-        this.resizeObserver = new ResizeObserver(entries => {
-            const connectors = this.connectors.filter(connector => {
-                for (let entry of entries) {
-                    const element = entry.target;
-
-                    if (connector.source == element || connector.target == element || connector.source.offsetParent == element || connector.target.offsetParent == element) {
-                        return true;
-                    }
-                }
-                return false;
-            });
-
-            // redraw a connector if one of its endpoint elements has changed size
-            this.redraw(connectors);
-        });
-
-        this.styleObserver = new MutationObserver(mutationList => {
-            mutationList.forEach(mutation => {
-                switch (mutation.attributeName) {
-                    case 'style':
-                        const connectors = this.connectors.filter(connector => {
-                            const element = mutation.target as HTMLElement;
-                            return connector.source == element || connector.target == element ||
-                                isDescendant(element, connector.source) || isDescendant(element, connector.target);
-                        });
-
-                        // redraw a connector if one of its endpoint elements has changed size
-                        this.redraw(connectors);
-                        break;
-                }
-            });
-        });
+        this.resizeObserver = new ResizeObserver(this.redraw.bind(this));
+        this.styleObserver = new MutationObserver(this.redraw.bind(this));
 
         this.childObserver = new MutationObserver(mutationsList => {
             let unattachedConnectors: Set<Connector> = new Set();
@@ -183,7 +153,6 @@ export class Diagram {
         const connectors = this.connectors.filter(c => c !== connector);
         connector.remove();
         this.resizeObserver.disconnect();
-        this.styleObserver.disconnect();
 
         connectors.forEach(connector => {
             this.addConnector(connector);
@@ -197,7 +166,6 @@ export class Diagram {
             connector.remove();
         });
         this.resizeObserver.disconnect();
-        this.styleObserver.disconnect();
         this.connectors = [];
 
         this.elements.forEach(element => {
@@ -206,6 +174,7 @@ export class Diagram {
         this.elements = [];
 
         this.childObserver.observe(this.container, { subtree: true, childList: true });
+        this.styleObserver.observe(this.container, { subtree: true, attributeFilter: ["class", "style"] });
     }
 
     private observeConnectorEndpoint(element: HTMLElement): void {
@@ -216,29 +185,6 @@ export class Diagram {
         if (element.offsetParent) {
             this.resizeObserver.observe(element.offsetParent);
         }
-
-        // trigger redraw if endpoint element position changes
-        this.styleObserver.observe(element, { attributeFilter: ["style"] });
-
-        // listen to events on positioned ancestors to handle case when element moves with its container
-        this.getPositionedAncestors(element).forEach(ancestor => {
-            this.styleObserver.observe(ancestor, { attributeFilter: ["style"] });
-        });
-    }
-
-    /**
-     * Finds all positioned ancestors of a diagram element.
-     * @param element The diagram element whose positioned ancestors to find.
-     * @returns A list of positioned ancestors.
-     */
-    private getPositionedAncestors(element: HTMLElement): HTMLElement[] {
-        let result: HTMLElement[] = [];
-        let parent = element.offsetParent as HTMLElement | null;
-        while (parent != null && parent != this.container) {
-            result.push(parent);
-            parent = parent.offsetParent as HTMLElement | null;
-        }
-        return result;
     }
 
     /**
@@ -254,7 +200,7 @@ export class Diagram {
             rect.top - refRect.top,
             rect.right - refRect.left,
             rect.bottom - refRect.top
-        )
+        );
     }
 
     getHost(): HTMLElement {
@@ -269,19 +215,27 @@ export class Diagram {
             const childWidth = elem.offsetWidth;
             const childHeight = elem.offsetHeight;
 
-            elem.style.left = (Math.random() * (outerWidth - childWidth)) + 'px';
-            elem.style.top = (Math.random() * (outerHeight - childHeight)) + 'px';
+            elem.style.left = (Math.random() * (outerWidth - childWidth)) + "px";
+            elem.style.top = (Math.random() * (outerHeight - childHeight)) + "px";
         });
     }
 
-    private redraw(connectors: Connector[]) {
-        if (connectors.length > 0) {
+    private redraw() {
+        if (!this.repainting) {
+            window.requestAnimationFrame(this.repaint.bind(this));
+            this.repainting = true;
+        }
+    }
+
+    private repaint() {
+        if (this.connectors.length > 0) {
             const checker = new VisibilityChecker();
-            connectors.forEach(connector => {
-                // redraw a connector if one of its endpoint elements has changed size
+            this.connectors.forEach(connector => {
+                // redraw a connector if one of its endpoint elements has changed position or size
                 connector.draw(this, checker);
             });
         }
+        this.repainting = false;
     }
 }
 
@@ -291,9 +245,9 @@ export class Arrow extends Connector {
     }
 
     constructor(source: HTMLElement, target: HTMLElement) {
-        const path = createSVGElement('path') as SVGSVGElement;
-        path.setAttribute('stroke', 'black');
-        path.setAttribute('fill', 'transparent');
+        const path = createSVGElement("path") as SVGSVGElement;
+        path.setAttribute("stroke", "black");
+        path.setAttribute("fill", "transparent");
         super(path, source, target);
     }
 
@@ -302,8 +256,8 @@ export class Arrow extends Connector {
         let target: Element = checker.getFirstVisibleAncestor(this.target);
 
         if (source == target) {
-            this.path.removeAttribute('d');
-            this.path.removeAttribute('marker-end');
+            this.path.removeAttribute("d");
+            this.path.removeAttribute("marker-end");
             return;
         }
 
@@ -358,13 +312,16 @@ export class Arrow extends Connector {
         }
 
         const curve = `M${sourcePt.x} ${sourcePt.y} C${sourceCtlPt.x} ${sourceCtlPt.y} ${targetCtlPt.x} ${targetCtlPt.y} ${targetPt.x} ${targetPt.y}`;
-        this.path.setAttribute('d', curve);
-        this.path.setAttribute('marker-end', `url(#${diagram.markerId})`);
+        this.path.setAttribute("d", curve);
+        this.path.setAttribute("marker-end", `url(#${diagram.markerId})`);
     }
 }
 
 /**
  * Permits an element to be moved with mouse drag.
+ *
+ * The left and top style attributes of the dragged element are set with !important to ensure it's not repositioned
+ * while the action is taking place.
  */
 export class Movable {
     private mousePos: Coordinate = new Point(0, 0);
@@ -374,18 +331,23 @@ export class Movable {
         event.preventDefault();
         const deltaX = event.clientX - this.mousePos.x;
         const deltaY = event.clientY - this.mousePos.y;
-        this.element.style.left = (this.elementPos.x + deltaX) + 'px';
-        this.element.style.top = (this.elementPos.y + deltaY) + 'px';
+        this.element.style.setProperty("left", (this.elementPos.x + deltaX) + "px", "important");
+        this.element.style.setProperty("top", (this.elementPos.y + deltaY) + "px", "important");
     };
 
     constructor(private element: HTMLElement) {
-        element.addEventListener('mousedown', (event) => {
+        element.addEventListener("mousedown", event => {
             this.mousePos = new Point(event.clientX, event.clientY);
 
-            document.addEventListener('mouseup', () => {
-                document.removeEventListener('mousemove', this.mouseMoveListener, true);
+            document.addEventListener("mouseup", event => {
+                document.removeEventListener("mousemove", this.mouseMoveListener, true);
+
+                const deltaX = event.clientX - this.mousePos.x;
+                const deltaY = event.clientY - this.mousePos.y;
+                this.element.style.setProperty("left", (this.elementPos.x + deltaX) + "px");
+                this.element.style.setProperty("top", (this.elementPos.y + deltaY) + "px");
             }, { "capture": true, "once": true });
-            document.addEventListener('mousemove', this.mouseMoveListener, true);
+            document.addEventListener("mousemove", this.mouseMoveListener, true);
 
             this.elementPos = new Point(element.offsetLeft, element.offsetTop);
         }, true);

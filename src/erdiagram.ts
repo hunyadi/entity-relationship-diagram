@@ -7,10 +7,10 @@
  * @see     https://hunyadi.info.hu/
  **/
 
-import { Arrow, Diagram, Movable } from './diagram';
-import { getOffsetCenter, getOffsetPosition, getOffsetRect } from './htmldom';
-import { Point, Vector } from './geometry';
-import TabPanel from './tabpanel';
+import { Arrow, Diagram, Movable } from "./diagram";
+import { getOffsetRect } from "./htmldom";
+import { Point, Size, Vector } from "./geometry";
+import TabPanel from "./tabpanel";
 
 function withDefaults<T>() {
     return function <TDefaults extends Partial<T>>(defs: TDefaults) {
@@ -20,8 +20,8 @@ function withDefaults<T>() {
                 result[k] = result[k] || defs[k];
             }
             return result;
-        }
-    }
+        };
+    };
 }
 
 declare interface Renderable {
@@ -65,18 +65,18 @@ export class Entity implements PropertyAccessor, Renderable {
     private elem: HTMLTableElement;
 
     constructor(private descriptor: EntityDescriptor) {
-        this.elem = document.createElement('table');
+        this.elem = document.createElement("table");
         this.elem.classList.add("entity");
         const rows = descriptor.properties.map(property => {
             const propName = `<span class="entity-property-name">${property.name}</span>`;
             const propType = `<span class="entity-property-type">${property.type}</span>`;
             return `<tr><td data-property="${property.name}">${propName}: ${propType}</td></tr>`;
         });
-        this.elem.innerHTML = `<thead><tr><th>${descriptor.name} <span class="toggle"></span></th></tr></thead><tbody>` + rows.join('') + '</tbody>';
+        this.elem.innerHTML = `<thead><tr><th>${descriptor.name} <span class="toggle"></span></th></tr></thead><tbody>` + rows.join("") + "</tbody>";
 
-        const toggle = this.elem.querySelector('thead>tr>th>span.toggle')!;
-        const body = this.elem.querySelector('tbody')!;
-        toggle.addEventListener('click', (event) => {
+        const toggle = this.elem.querySelector("thead>tr>th>span.toggle")!;
+        const body = this.elem.querySelector("tbody")!;
+        toggle.addEventListener("click", (event) => {
             event.preventDefault();
             event.stopPropagation();
             body.classList.toggle("hidden");
@@ -124,8 +124,10 @@ declare interface ElasticLayoutOptions {
  * An object upon which forces act in a spring/charge system.
  */
 class ElasticLayoutObject {
-    force: Vector = new Vector(0, 0);
-    velocity: Vector = new Vector(0, 0);
+    force = new Vector(0, 0);
+    velocity = new Vector(0, 0);
+    position = new Vector(0, 0);
+    size = new Size(0, 0);
 
     constructor(public element: HTMLElement) { }
 
@@ -160,14 +162,48 @@ class ElasticLayout {
         });
     }
 
+    private getCenterPosition(): Vector {
+        const containerRect = this.canvas.getBoundingClientRect();
+        return new Vector(containerRect.width / 2, containerRect.height / 2);
+    }
+
+    private getDynamicObjects(): ElasticLayoutObject[] {
+        return this.objects.filter(obj => {
+            return (obj.element.style.getPropertyPriority("left") != "important" && obj.element.style.getPropertyPriority("top") != "important");
+        });
+    }
+
+    private loadPosition(objects: ElasticLayoutObject[]): void {
+        const containerRect = this.canvas.getBoundingClientRect();
+        const containerRef = new Point(containerRect.x, containerRect.y);
+
+        objects.forEach(obj => {
+            const rect = getOffsetRect(obj.element, containerRef);
+            obj.position = new Vector(rect.centerX, rect.centerY);
+            obj.size = new Size(rect.width, rect.height);
+        });
+    }
+
+    private savePosition(objects: ElasticLayoutObject[]): void {
+        objects.forEach(obj => {
+            // update position (unless an explicit value is forced with !important)
+            obj.element.style.left = (obj.position.x - obj.size.width / 2) + "px";
+            obj.element.style.top = (obj.position.y - obj.size.height / 2) + "px";
+        });
+    }
+
     initialize(): void {
-        this.step(0.1);
+        const center = this.getCenterPosition();
+        const objects = this.getDynamicObjects();
+        this.loadPosition(objects);
+        this.step(center, objects, 0.1);
         for (let k = 0; k < this.options.iterations; ++k) {
-            if (this.step(0.1)) {
-                return;
-            }
+            this.step(center, objects, 0.1);
         }
+        this.savePosition(objects);
         this.running = false;
+
+        this.start();
     }
 
     start(): void {
@@ -180,29 +216,20 @@ class ElasticLayout {
         this.running = false;
     }
 
-    private step(elapsed: DOMHighResTimeStamp): boolean {
-        const containerRect = this.canvas.getBoundingClientRect();
-        const containerRef = new Point(containerRect.x, containerRect.y);
-
-        this.objects.forEach(obj => {
+    private step(centerPos: Vector, objects: ElasticLayoutObject[], elapsed: DOMHighResTimeStamp): void {
+        objects.forEach(obj => {
             let offset = obj.velocity.times(elapsed);
-
-            const objPos = getOffsetPosition(obj.element, containerRef);
-            obj.element.style.left = (objPos.x + offset.x) + 'px';
-            obj.element.style.top = (objPos.y + offset.y) + 'px';
+            obj.position.add(offset);
         });
-        this.objects.forEach(obj => {
+        objects.forEach(obj => {
             obj.velocity = obj.force.times(elapsed / obj.mass);
         });
 
-        const centerPos = new Vector(containerRect.width / 2, containerRect.height / 2);
-
-        for (let i = 0; i < this.objects.length; ++i) {
-            const source = this.objects[i]!;
-            const sourcePos = Vector.from(getOffsetCenter(source.element, containerRef));
+        for (let i = 0; i < objects.length; ++i) {
+            const source = objects[i]!;
 
             // attraction to center
-            const centerDir = centerPos.minus(sourcePos).normalize();
+            const centerDir = centerPos.minus(source.position).normalize();
             const centerForce = centerDir.times(this.options.gravity);
             source.force.add(centerForce);
 
@@ -210,16 +237,15 @@ class ElasticLayout {
             const dragForce = source.velocity.times(-this.options.drag);
             source.force.add(dragForce);
 
-            for (let j = i + 1; j < this.objects.length; ++j) {
-                const target = this.objects[j]!;
-                const targetPos = Vector.from(getOffsetCenter(target.element, containerRef));
+            for (let j = i + 1; j < objects.length; ++j) {
+                const target = objects[j]!;
 
-                const vector = targetPos.minus(sourcePos);
+                const vector = target.position.minus(source.position);
                 const distance = vector.magnitude();
                 vector.normalize();
 
                 // repulsive force between close items
-                const repulsiveForce = vector.times((this.options.charge * this.options.charge) / (0.1 + distance * distance));
+                const repulsiveForce = vector.times((this.options.charge * this.options.charge) / (1.0 + distance * distance));
                 source.force.add(repulsiveForce.reversed());
                 target.force.add(repulsiveForce);
 
@@ -231,34 +257,29 @@ class ElasticLayout {
                 }
             }
         }
-
-        // check stop condition
-        return this.objects.every(obj => {
-            if (obj.velocity.magnitude() > 2.0) {
-                return false;
-            }
-
-            const rect = getOffsetRect(obj.element, containerRef);
-            return rect.left > 0 && rect.top > 0 &&
-                rect.right < containerRect.width && rect.bottom < containerRect.height;
-        })
     }
 
     private tick(timestamp: DOMHighResTimeStamp) {
         let elapsed = (timestamp - this.lastTimestamp) / 1000;
+        if (elapsed > 5.0) {
+            elapsed = 5.0;
+        }
+
+        const center = this.getCenterPosition();
+        const objects = this.getDynamicObjects();
+        this.loadPosition(objects);
         while (elapsed > 0.1) {
-            if (this.step(0.1)) {
-                return;
-            }
+            this.step(center, objects, 0.1);
             elapsed -= 0.1;
         }
 
-        if (!this.running || this.step(elapsed)) {
-            return;
-        }
+        this.step(center, objects, elapsed);
+        this.savePosition(objects);
 
-        this.lastTimestamp = timestamp;
-        window.requestAnimationFrame(this.tick.bind(this));
+        if (this.running) {
+            this.lastTimestamp = timestamp;
+            window.requestAnimationFrame(this.tick.bind(this));
+        }
     }
 }
 
@@ -296,8 +317,8 @@ export class ElasticEntityDiagram extends EntityDiagram {
 
         let layout = new ElasticLayout(options,
             this.diagram.getHost(),
-            this.data.entities.map(entity => { return entity.element }),
-            (elem1, elem2) => { return this.diagram.isConnected(elem1, elem2) }
+            this.data.entities.map(entity => { return entity.element; }),
+            (elem1, elem2) => { return this.diagram.isConnected(elem1, elem2); }
         );
         layout.initialize();
     }
@@ -315,7 +336,7 @@ export class NavigableEntityDiagram extends EntityDiagram {
             entity.head.addEventListener("click", event => {
                 event.preventDefault();
                 this.show(entity);
-            })
+            });
 
             const option = document.createElement("option");
             option.innerText = entity.name;
@@ -468,5 +489,5 @@ class EntityRelationshipFactoryImpl implements EntityRelationshipFactory {
     }
 }
 
-window['erd'] = new EntityRelationshipFactoryImpl();
-window['TabPanel'] = TabPanel;
+window["erd"] = new EntityRelationshipFactoryImpl();
+window["TabPanel"] = TabPanel;

@@ -23,6 +23,10 @@ body > .tab-panel {
     flex: 1;
 }
 
+.tab-view {
+    position: relative;
+}
+
 .tab-view > * {
     visibility: hidden;
     position: absolute !important;

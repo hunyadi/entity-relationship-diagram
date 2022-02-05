@@ -98,3 +98,7 @@ export class Rect {
         return (this.top + this.bottom) / 2;
     }
 }
+
+export class Size {
+    constructor(public width: number, public height: number) { }
+}

@@ -7,7 +7,7 @@
  * @see     https://hunyadi.info.hu/
  **/
 
-import { Coordinate, Point, Rect } from './geometry';
+import { Coordinate, Point, Rect } from "./geometry";
 
 /**
  * Checks if two nodes are in ancestor/descendant relationship.
@@ -65,6 +65,21 @@ export function getOffsetRect(element: HTMLElement, ref: Point): Rect {
     return new Rect(rect.left - ref.x, rect.top - ref.y, rect.right - ref.x, rect.bottom - ref.y);
 }
 
+/**
+ * Finds all positioned ancestors of a diagram element.
+ * @param element The diagram element whose positioned ancestors to find.
+ * @returns A list of positioned ancestors.
+ */
+export function getPositionedAncestors(element: HTMLElement, root: HTMLElement): HTMLElement[] {
+    let result: HTMLElement[] = [];
+    let parent = element.offsetParent as HTMLElement | null;
+    while (parent != null && parent != root) {
+        result.push(parent);
+        parent = parent.offsetParent as HTMLElement | null;
+    }
+    return result;
+}
+
 export function createSVGElement(typeName: string): SVGElement {
-    return document.createElementNS('http://www.w3.org/2000/svg', typeName);
+    return document.createElementNS("http://www.w3.org/2000/svg", typeName);
 }
