@@ -7,6 +7,7 @@
  * @see     https://hunyadi.info.hu/
  **/
 
+import { BooleanMatrix } from "./boolarray";
 import { Arrow, Diagram, Movable } from "./diagram";
 import { getOffsetRect } from "./htmldom";
 import { Point, Size, Vector } from "./geometry";
@@ -105,7 +106,7 @@ export class EntityRelationship {
 }
 
 /** A function that returns if two elements are connected. */
-type ConnectedFunction = (elem1: HTMLElement, elem2: HTMLElement) => boolean;
+type ConnectionCheckerFunction = (elem1: HTMLElement, elem2: HTMLElement) => boolean;
 
 declare interface ElasticLayoutOptions {
     /** Charge of a object, repulsive force exerted by the object, according to Coulomb's law. */
@@ -145,10 +146,11 @@ class ElasticLayoutObject {
  */
 class ElasticLayout {
     private objects: ElasticLayoutObject[];
+    private connectivity: BooleanMatrix;
     private lastTimestamp: DOMHighResTimeStamp = 0;
     private running: boolean = false;
 
-    constructor(private options: ElasticLayoutOptions, private canvas: HTMLElement, elements: HTMLElement[], private isConnectedFunc: ConnectedFunction) {
+    constructor(private options: ElasticLayoutOptions, private canvas: HTMLElement, elements: HTMLElement[], isConnectedFunc: ConnectionCheckerFunction) {
         withDefaults<ElasticLayoutOptions>()({
             charge: 1000,
             stiffness: 0.2,
@@ -160,6 +162,13 @@ class ElasticLayout {
         this.objects = elements.map(element => {
             return new ElasticLayoutObject(element);
         });
+
+        this.connectivity = new BooleanMatrix(elements.length, elements.length);
+        for (let [i, source] of this.objects.entries()) {
+            for (let [j, target] of this.objects.entries()) {
+                this.connectivity.set(i, j, isConnectedFunc(source.element, target.element));
+            }
+        }
     }
 
     private getCenterPosition(): Vector {
@@ -199,6 +208,12 @@ class ElasticLayout {
             obj.element.style.left = (obj.position.x - obj.size.width / 2) + "px";
             obj.element.style.top = (obj.position.y - obj.size.height / 2) + "px";
         });
+    }
+
+    private isConnected(source: ElasticLayoutObject, target: ElasticLayoutObject) {
+        const sourceIndex = this.objects.indexOf(source);
+        const targetIndex = this.objects.indexOf(target);
+        return this.connectivity.get(sourceIndex, targetIndex);
     }
 
     initialize(): void {
@@ -265,7 +280,7 @@ class ElasticLayout {
                 target.force.add(repulsiveForce);
 
                 // attractive force between connected items
-                if (this.isConnectedFunc(source.element, target.element)) {
+                if (this.isConnected(source, target)) {
                     const attractiveForce = vector.times(this.options.stiffness * distance);
                     source.force.add(attractiveForce);
                     target.force.add(attractiveForce.reversed());
@@ -334,9 +349,11 @@ class ElasticEntityDiagram extends EntityDiagram {
         });
         this.diagram.shuffle();
 
-        let layout = new ElasticLayout(options,
+        const elements = this.data.entities.map(entity => { return entity.element; });
+        let layout = new ElasticLayout(
+            options,
             this.diagram.getHost(),
-            this.data.entities.map(entity => { return entity.element; }),
+            elements,
             (elem1, elem2) => { return this.diagram.isConnected(elem1, elem2); }
         );
         layout.initialize();
