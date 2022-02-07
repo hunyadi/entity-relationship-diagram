@@ -167,23 +167,32 @@ class ElasticLayout {
         return new Vector(containerRect.width / 2, containerRect.height / 2);
     }
 
+    /**
+     * Produces a list of objects that participate in elastic layout.
+     */
     private getDynamicObjects(): ElasticLayoutObject[] {
         return this.objects.filter(obj => {
             return (obj.element.style.getPropertyPriority("left") != "important" && obj.element.style.getPropertyPriority("top") != "important");
         });
     }
 
+    /**
+     * Reads position information from HTML layout into internal data structures.
+     */
     private loadPosition(objects: ElasticLayoutObject[]): void {
         const containerRect = this.canvas.getBoundingClientRect();
         const containerRef = new Point(containerRect.x, containerRect.y);
 
         objects.forEach(obj => {
             const rect = getOffsetRect(obj.element, containerRef);
-            obj.position = new Vector(rect.centerX, rect.centerY);
+            obj.position = Vector.from(rect.center);
             obj.size = new Size(rect.width, rect.height);
         });
     }
 
+    /**
+     * Sets position information in HTML layout based on data in internal data structures.
+     */
     private savePosition(objects: ElasticLayoutObject[]): void {
         objects.forEach(obj => {
             // update position (unless an explicit value is forced with !important)
@@ -216,6 +225,12 @@ class ElasticLayout {
         this.running = false;
     }
 
+    /**
+     * Adjusts position of objects over time as various forces act on them.
+     * @param centerPos The central position of the viewport towards which gravity pulls objects.
+     * @param objects List of objects that participate in elastic layout.
+     * @param elapsed A time delta that elapsed since the last invocation.
+     */
     private step(centerPos: Vector, objects: ElasticLayoutObject[], elapsed: DOMHighResTimeStamp): void {
         objects.forEach(obj => {
             let offset = obj.velocity.times(elapsed);
@@ -259,6 +274,10 @@ class ElasticLayout {
         }
     }
 
+    /**
+     * Invoked when an animation step is about to be painted.
+     * @param timestamp The timestamp received for an animation frame event.
+     */
     private tick(timestamp: DOMHighResTimeStamp) {
         let elapsed = (timestamp - this.lastTimestamp) / 1000;
         if (elapsed > 5.0) {
@@ -297,7 +316,7 @@ class EntityDiagram {
     }
 }
 
-export class ElasticEntityDiagram extends EntityDiagram {
+class ElasticEntityDiagram extends EntityDiagram {
     constructor(elem: HTMLElement, data: EntityRelationshipData, options: ElasticLayoutOptions) {
         super(elem, data);
         elem.classList.add("elastic");
@@ -324,7 +343,7 @@ export class ElasticEntityDiagram extends EntityDiagram {
     }
 }
 
-export class NavigableEntityDiagram extends EntityDiagram {
+class NavigableEntityDiagram extends EntityDiagram {
     private selector: HTMLSelectElement;
 
     constructor(elem: HTMLElement, data: EntityRelationshipData) {
@@ -464,6 +483,9 @@ export class EntityGraph {
     }
 }
 
+/**
+ * An interface that prevents name mangling for factory functions when TypeScript code is fed to the Closure Compiler.
+ */
 declare interface EntityRelationshipFactory {
     createEntity(descriptor: EntityDescriptor): Entity;
     createRelationship(source: EntityElement, target: EntityElement): EntityRelationship;
@@ -471,6 +493,9 @@ declare interface EntityRelationshipFactory {
     createNavigableDiagram(elem: HTMLElement, data: EntityRelationshipData): NavigableEntityDiagram;
 }
 
+/**
+ * The concrete implementation of the factory function interface.
+ */
 class EntityRelationshipFactoryImpl implements EntityRelationshipFactory {
     createEntity(descriptor: EntityDescriptor): Entity {
         return new Entity(descriptor);
@@ -489,5 +514,6 @@ class EntityRelationshipFactoryImpl implements EntityRelationshipFactory {
     }
 }
 
+// export symbols to caller domain (necessary in Closure Compiler context)
 window["erd"] = new EntityRelationshipFactoryImpl();
 window["TabPanel"] = TabPanel;

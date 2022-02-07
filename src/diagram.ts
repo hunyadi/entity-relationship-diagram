@@ -8,7 +8,7 @@
  **/
 
 import { Coordinate, Point, Rect } from "./geometry";
-import { createSVGElement, isDescendant, VisibilityChecker } from "./htmldom";
+import { createSVGElement, FirstVisibleAncestor } from "./htmldom";
 
 abstract class Shape {
     /**
@@ -47,7 +47,7 @@ abstract class Connector extends Shape {
     }
 
     /** Redraws the connector. */
-    abstract draw(diagram: Diagram, checker: VisibilityChecker): void;
+    abstract draw(diagram: Diagram, checker: FirstVisibleAncestor): void;
 }
 
 export class Diagram {
@@ -80,34 +80,36 @@ export class Diagram {
 
     /**
      * Creates a diagram.
-     * @param svg 
+     * @param container The container element that is to wrap the item host layer and the drawing layer.
      */
-    constructor(private container: HTMLElement) {
+    constructor(container: HTMLElement) {
         const fragment = document.createDocumentFragment();
         Array.from(container.children).forEach(child => {
             fragment.append(child);
         });
 
+        // set up drawing layer for connectors
         this.svg = createSVGElement("svg") as SVGSVGElement;
         this.svg.innerHTML = `<defs><marker id="${this.markerId}" markerWidth="${this.markerWidth}" markerHeight="${this.markerHeight}" refX="${this.markerWidth}" refY="${this.markerHeight / 2}" orient="auto"><polygon points="0 0, ${this.markerWidth} ${this.markerHeight / 2}, 0 ${this.markerHeight}" /></marker></defs>`;
         container.append(this.svg);
+
+        // set up item host layer
         this.host = document.createElement("div");
-        container.append(this.host);
         this.host.append(fragment);
+        container.append(this.host);
 
         const observer = new ResizeObserver(this.redraw.bind(this));
         observer.observe(this.host);
 
         this.resizeObserver = new ResizeObserver(this.redraw.bind(this));
         this.styleObserver = new MutationObserver(this.redraw.bind(this));
-
         this.childObserver = new MutationObserver(mutationsList => {
             let unattachedConnectors: Set<Connector> = new Set();
 
             mutationsList.forEach(mutation => {
                 mutation.removedNodes.forEach(node => {
                     this.connectors.forEach(connector => {
-                        if (isDescendant(node, connector.source) || isDescendant(node, connector.target)) {
+                        if (node.contains(connector.source) || node.contains(connector.target)) {
                             unattachedConnectors.add(connector);
                         }
                     });
@@ -125,8 +127,7 @@ export class Diagram {
 
     isConnectedTo(source: HTMLElement, target: HTMLElement): boolean {
         return this.connectors.some(connector => {
-            return (connector.source == source || isDescendant(source, connector.source)) &&
-                (connector.target == target || isDescendant(target, connector.target));
+            return source.contains(connector.source) && target.contains(connector.target);
         });
     }
 
@@ -136,7 +137,7 @@ export class Diagram {
 
     addElement(element: HTMLElement): void {
         this.elements.push(element);
-        if (!isDescendant(this.host, element)) {
+        if (!this.host.contains(element)) {
             this.host.append(element);
         }
     }
@@ -173,8 +174,8 @@ export class Diagram {
         });
         this.elements = [];
 
-        this.childObserver.observe(this.container, { subtree: true, childList: true });
-        this.styleObserver.observe(this.container, { subtree: true, attributeFilter: ["class", "style"] });
+        this.childObserver.observe(this.host, { subtree: true, childList: true });
+        this.styleObserver.observe(this.host, { subtree: true, attributeFilter: ["class", "style"] });
     }
 
     private observeConnectorEndpoint(element: HTMLElement): void {
@@ -229,7 +230,7 @@ export class Diagram {
 
     private repaint() {
         if (this.connectors.length > 0) {
-            const checker = new VisibilityChecker();
+            const checker = new FirstVisibleAncestor();
             this.connectors.forEach(connector => {
                 // redraw a connector if one of its endpoint elements has changed position or size
                 connector.draw(this, checker);
@@ -251,9 +252,9 @@ export class Arrow extends Connector {
         super(path, source, target);
     }
 
-    draw(diagram: Diagram, checker: VisibilityChecker): void {
-        let source: Element = checker.getFirstVisibleAncestor(this.source);
-        let target: Element = checker.getFirstVisibleAncestor(this.target);
+    draw(diagram: Diagram, checker: FirstVisibleAncestor): void {
+        let source: Element = checker.get(this.source);
+        let target: Element = checker.get(this.target);
 
         if (source == target) {
             this.path.removeAttribute("d");

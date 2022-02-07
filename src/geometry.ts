@@ -82,20 +82,16 @@ export class Vector implements Coordinate {
 export class Rect {
     constructor(public left: number, public top: number, public right: number, public bottom: number) { }
 
-    public get width(): number {
+    get width(): number {
         return this.right - this.left;
     }
 
-    public get height(): number {
+    get height(): number {
         return this.bottom - this.top;
     }
 
-    public get centerX(): number {
-        return (this.left + this.right) / 2;
-    }
-
-    public get centerY(): number {
-        return (this.top + this.bottom) / 2;
+    get center(): Point {
+        return new Point((this.left + this.right) / 2, (this.top + this.bottom) / 2);
     }
 }
 

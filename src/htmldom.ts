@@ -7,38 +7,39 @@
  * @see     https://hunyadi.info.hu/
  **/
 
-import { Coordinate, Point, Rect } from "./geometry";
+import { Point, Rect } from "./geometry";
 
-/**
- * Checks if two nodes are in ancestor/descendant relationship.
- * @param ancestor The ancestor node.
- * @param node The potential descendant node.
- * @returns True if the node is a descendant of the ancestor node.
- */
-export function isDescendant(ancestor: Node, node: Node): boolean {
-    return (node.compareDocumentPosition(ancestor) & Node.DOCUMENT_POSITION_CONTAINS) != 0;
+type ComputeFunction<KeyType, ValueType> = (item: KeyType) => ValueType;
+
+class Memoizer<KeyType, ValueType> {
+    protected cache = new Map<KeyType, ValueType>();
+
+    constructor(private compute: ComputeFunction<KeyType, ValueType>) { }
+
+    get(item: KeyType): ValueType {
+        let match = this.cache.get(item);
+        if (match === undefined) {
+            match = this.compute(item)
+            this.cache.set(item, match);
+        }
+        return match;
+    }
 }
 
-export class VisibilityChecker {
-    private cache = new Map<HTMLElement, HTMLElement>();
-
-    /**
-     * Finds the first visible ancestor element of a child element, or returns a root element if none is found.
-     * @param element The element whose first visible ancestor to seek.
-     * @returns The first element in the hierarchy that is visible (i.e. CSS `display` is not `none`), or the root element.
-     */
-    getFirstVisibleAncestor(element: HTMLElement): HTMLElement {
-        const ancestor = this.cache.get(element);
-        if (ancestor) {
-            return ancestor;
-        }
-
-        let e = element;
-        while (e.offsetParent == null && e.parentElement != null) {
-            e = e.parentElement;
-        }
-        this.cache.set(element, e);
-        return e;
+/**
+ * Finds the first visible ancestor element of a child element, or returns a root element if none is found.
+ * 
+ * Takes the element whose first visible ancestor to seek and returns the first element in the hierarchy that
+ * is visible (i.e. CSS `display` is not `none`), or the root element.
+ */
+export class FirstVisibleAncestor extends Memoizer<HTMLElement, HTMLElement> {
+    constructor() {
+        super((e: HTMLElement) => {
+            while (e.offsetParent == null && e.parentElement != null) {
+                e = e.parentElement;
+            }
+            return e;
+        })
     }
 }
 
@@ -46,40 +47,13 @@ export class VisibilityChecker {
  * Transforms the position of an element to a reference coordinate system.
  * The reference coordinate system is specified relative to the viewport.
  * @param element The HTML element whose position to find.
- * @returns The position of the element w.r.t. the reference system.
+ * @returns The position and size of the element w.r.t. the reference system.
  */
-export function getOffsetPosition(element: HTMLElement, ref: Point): Coordinate {
-    const rect = element.getBoundingClientRect();
-    return new Point(rect.x - ref.x, rect.y - ref.y);
-}
-
-export function getOffsetCenter(element: HTMLElement, ref: Point): Coordinate {
-    const rect = element.getBoundingClientRect();
-    const midX = (rect.right + rect.left) / 2;
-    const midY = (rect.bottom + rect.top) / 2;
-    return new Point(midX - ref.x, midY - ref.y);
-}
-
 export function getOffsetRect(element: HTMLElement, ref: Point): Rect {
     const rect = element.getBoundingClientRect();
     return new Rect(rect.left - ref.x, rect.top - ref.y, rect.right - ref.x, rect.bottom - ref.y);
 }
 
-/**
- * Finds all positioned ancestors of a diagram element.
- * @param element The diagram element whose positioned ancestors to find.
- * @returns A list of positioned ancestors.
- */
-export function getPositionedAncestors(element: HTMLElement, root: HTMLElement): HTMLElement[] {
-    let result: HTMLElement[] = [];
-    let parent = element.offsetParent as HTMLElement | null;
-    while (parent != null && parent != root) {
-        result.push(parent);
-        parent = parent.offsetParent as HTMLElement | null;
-    }
-    return result;
-}
-
-export function createSVGElement(typeName: string): SVGElement {
-    return document.createElementNS("http://www.w3.org/2000/svg", typeName);
+export function createSVGElement(type: string): SVGElement {
+    return document.createElementNS("http://www.w3.org/2000/svg", type);
 }
