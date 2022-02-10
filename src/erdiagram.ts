@@ -9,6 +9,7 @@
 
 import { Arrow, Diagram, Movable } from "./diagram";
 import { ElasticLayout, ElasticLayoutOptions } from "./elastic";
+import { SpectralLayout } from "./spectral";
 import TabPanel from "./tabpanel";
 
 
@@ -125,13 +126,25 @@ class ElasticEntityDiagram extends EntityDiagram {
         this.diagram.shuffle();
 
         const elements = this.data.entities.map(entity => { return entity.element; });
-        let layout = new ElasticLayout(
+        const edges = this.data.relationships.map(relationship => {
+            return { source: relationship.source.parent.element, target: relationship.target.parent.element };
+        });
+
+        const spectralLayout = new SpectralLayout(elements, edges);
+        const points = spectralLayout.calculate()
+
+        for (let [k, element] of elements.entries()) {
+            element.style.left = 100 * points[k]!.x + "%";
+            element.style.top = 100 * points[k]!.y + "%";
+        }
+
+        let elasticLayout = new ElasticLayout(
             options,
             this.diagram.getHost(),
             elements,
             (elem1, elem2) => { return this.diagram.isConnected(elem1, elem2); }
         );
-        layout.initialize();
+        elasticLayout.initialize();
     }
 }
 
@@ -213,6 +226,35 @@ class NavigableEntityDiagram extends EntityDiagram {
     }
 }
 
+class SpectralEntityDiagram extends EntityDiagram {
+    constructor(elem: HTMLElement, data: EntityRelationshipData) {
+        super(elem, data);
+        elem.classList.add("spectral");
+
+        this.data.entities.forEach(entity => {
+            this.diagram.addElement(entity.element);
+            new Movable(entity.element);
+        });
+
+        this.data.relationships.forEach(relationship => {
+            this.diagram.addConnector(new Arrow(relationship.source.element, relationship.target.element));
+        });
+
+        const edges = this.data.relationships.map(relationship => {
+            return { source: relationship.source.parent, target: relationship.target.parent };
+        });
+
+        const layout = new SpectralLayout(this.data.entities, edges);
+        const points = layout.calculate()
+
+        for (let [k, entity] of this.data.entities.entries()) {
+            const element = entity.element;
+            element.style.left = 100 * points[k]!.x + "%";
+            element.style.top = 100 * points[k]!.y + "%";
+        }
+    }
+}
+
 export class EntityGraph {
     /** Maps entities to their neighbors. */
     private graph = new Map<Entity, Set<Entity>>();
@@ -283,6 +325,7 @@ declare interface EntityRelationshipFactory {
     createRelationship(source: EntityElement, target: EntityElement): EntityRelationship;
     createElasticDiagram(elem: HTMLElement, data: EntityRelationshipData, options: ElasticLayoutOptions): ElasticEntityDiagram;
     createNavigableDiagram(elem: HTMLElement, data: EntityRelationshipData): NavigableEntityDiagram;
+    createSpectralDiagram(elem: HTMLElement, data: EntityRelationshipData): SpectralEntityDiagram;
 }
 
 /**
@@ -303,6 +346,10 @@ class EntityRelationshipFactoryImpl implements EntityRelationshipFactory {
 
     createNavigableDiagram(elem: HTMLElement, data: EntityRelationshipData): NavigableEntityDiagram {
         return new NavigableEntityDiagram(elem, data);
+    }
+
+    createSpectralDiagram(elem: HTMLElement, data: EntityRelationshipData): SpectralEntityDiagram {
+        return new SpectralEntityDiagram(elem, data);
     }
 }
 

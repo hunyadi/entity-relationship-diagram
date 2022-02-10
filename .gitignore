@@ -1,2 +1,3 @@
 /.tscc*
 /dist
+/node_modules

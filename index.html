@@ -5,6 +5,7 @@
     <meta charset="utf-8" />
     <title>Entity Relationship Diagram demo</title>
     <link rel="stylesheet" type="text/css" href="css/erdiagram.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.1.1/math.min.js" defer="defer"></script>
     <script src="dist/erdiagram.min.js" defer="defer"></script>
 
     <script defer="defer">
@@ -80,7 +81,7 @@
                 stiffness: 0.2,
                 drag: 0.5,
                 gravity: 2.0,
-                iterations: 500,
+                iterations: 100,
             });
         }
 
@@ -88,13 +89,15 @@
             diagram = erd.createNavigableDiagram(document.getElementById("navigable-diagram"), setup());
         }
 
+        function displaySpectralDiagram(setup) {
+            diagram = erd.createSpectralDiagram(document.getElementById("spectral-diagram"), setup());
+        }
+
         document.addEventListener("DOMContentLoaded", () => {
             const setup = getComplexSetup;
-
-            //console.log(new EntityGraph(relationships).shortestPath(entities[2], entities[0]));
-
             displayElasticDiagram(setup);
             displayNavigableDiagram(setup);
+            displaySpectralDiagram(setup);
             new TabPanel(document.getElementById("tab-panel"));
         });
     </script>
@@ -104,13 +107,13 @@
     <div id="tab-panel" class="tab-panel">
         <div class="tab-selector">
             <span data-tab="elastic">Elastic</span>
-            <span data-tab="navigator">Navigator</span>
-            <span data-tab="path">Shortest path</span>
+            <span data-tab="navigable">Navigable</span>
+            <span data-tab="spectral">Spectral</span>
         </div>
         <div class="tab-view">
             <div id="elastic-diagram" class="diagram tab-active" data-tab="elastic"></div>
 
-            <div id="navigable-diagram" class="diagram" data-tab="navigator">
+            <div id="navigable-diagram" class="diagram" data-tab="navigable">
                 <div class="navigator">
                     <div class="left"></div>
                     <div class="center">
@@ -119,6 +122,8 @@
                     <div class="right"></div>
                 </div>
             </div>
+
+            <div id="spectral-diagram" class="diagram" data-tab="spectral"></div>
         </div>
     </div>
 </body>
