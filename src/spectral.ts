@@ -10,44 +10,34 @@
 
 import math = require("mathjs");
 import { Point } from "./geometry";
+import { RealMatrix } from "./matrix";
 
 type GraphEdge<T> = {
     source: T,
     target: T;
 };
 
-function rowsum(matrix: math.Matrix): number[] {
-    const rows: number = math.size(matrix).valueOf()[0];
-    const result: number[] = Array(rows).fill(0);
-    for (let k = 0; k < rows; ++k) {
-        result[k] = math.sum(math.row(matrix, k));
-    }
-    return result;
-}
-
 export class SpectralLayout<T> {
     constructor(private nodes: T[], private edges: GraphEdge<T>[]) { }
 
     calculate(): Point[] {
         // calculate adjacency matrix
-        let A = math.zeros(this.nodes.length, this.nodes.length) as math.Matrix;
+        const A = RealMatrix.zeros(this.nodes.length, this.nodes.length);
         this.edges.forEach(edge => {
-            if (edge.source !== edge.target) {
-                const sourceIndex = this.nodes.indexOf(edge.source);
-                const targetIndex = this.nodes.indexOf(edge.target);
-                A = math.subset(A, math.index(sourceIndex, targetIndex), 1);
-                A = math.subset(A, math.index(targetIndex, sourceIndex), 1);
-            }
+            const sourceIndex = this.nodes.indexOf(edge.source);
+            const targetIndex = this.nodes.indexOf(edge.target);
+            A.set(sourceIndex, targetIndex, 1);
+            A.set(targetIndex, sourceIndex, 1);
         });
 
         // calculate node degrees
-        const D = math.diag(rowsum(A));
+        const D = RealMatrix.diag(A.rowSum());
 
         // calculate graph Laplacian
-        const L = math.subtract(D, A) as math.Matrix;
+        const L = D.minus(A);
 
         // perform eigenvalue decomposition
-        const eigenresult = math.eigs(L, 1e-15);
+        const eigenresult = math.eigs(math.matrix(L.toArray()), 1e-15);
         const values = (eigenresult.values as math.Matrix).toArray() as number[];
 
         // find eigenvectors belonging to second and third smallest nonzero eigenvalues,
