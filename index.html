@@ -50,8 +50,10 @@
         }
 
         function getComplexSetup() {
+            const count = 20;
+
             const entities = [];
-            for (let i = 0; i < 20; ++i) {
+            for (let i = 0; i < count; ++i) {
                 let entity = erd.createEntity({
                     name: "entity" + i,
                     properties: [
@@ -64,8 +66,8 @@
             }
 
             const relationships = [];
-            for (let i = 0; i < 20; ++i) {
-                for (let j = 0; j < 20; ++j) {
+            for (let i = 0; i < count; ++i) {
+                for (let j = 0; j < count; ++j) {
                     if (Math.random() > 0.9) {
                         relationships.push(erd.createRelationship(entities[i].property("a"), entities[j].property("b")));
                     }
@@ -81,7 +83,7 @@
                 stiffness: 0.2,
                 drag: 0.5,
                 gravity: 2.0,
-                iterations: 100,
+                iterations: 500,
             });
         }
 

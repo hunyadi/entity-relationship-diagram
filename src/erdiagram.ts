@@ -61,7 +61,7 @@ export class Entity implements PropertyAccessor, Renderable {
             const propType = `<span class="entity-property-type">${property.type}</span>`;
             return `<tr><td data-property="${property.name}">${propName}: ${propType}</td></tr>`;
         });
-        this.elem.innerHTML = `<thead><tr><th>${descriptor.name} <span class="toggle"></span></th></tr></thead><tbody class="hidden">` + rows.join("") + "</tbody>";
+        this.elem.innerHTML = `<thead><tr><th>${descriptor.name} <span class="toggle"></span></th></tr></thead><tbody>` + rows.join("") + "</tbody>";
 
         const toggle = this.elem.querySelector("thead>tr>th>span.toggle")!;
         const body = this.elem.querySelector("tbody")!;
@@ -131,7 +131,7 @@ class ElasticEntityDiagram extends EntityDiagram {
         });
 
         const spectralLayout = new SpectralLayout(elements, edges);
-        const points = spectralLayout.calculate()
+        const points = spectralLayout.calculate();
 
         for (let [k, element] of elements.entries()) {
             element.style.left = 100 * points[k]!.x + "%";
@@ -245,7 +245,7 @@ class SpectralEntityDiagram extends EntityDiagram {
         });
 
         const layout = new SpectralLayout(this.data.entities, edges);
-        const points = layout.calculate()
+        const points = layout.calculate();
 
         for (let [k, entity] of this.data.entities.entries()) {
             const element = entity.element;

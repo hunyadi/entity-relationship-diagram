@@ -9,7 +9,7 @@
 
 
 import math = require("mathjs");
-import { Point } from "./geometry";
+import { Vector } from "./geometry";
 import { RealMatrix } from "./matrix";
 
 type GraphEdge<T> = {
@@ -20,7 +20,7 @@ type GraphEdge<T> = {
 export class SpectralLayout<T> {
     constructor(private nodes: T[], private edges: GraphEdge<T>[]) { }
 
-    calculate(): Point[] {
+    calculate(): Vector[] {
         // calculate adjacency matrix
         const A = RealMatrix.zeros(this.nodes.length, this.nodes.length);
         this.edges.forEach(edge => {
@@ -30,11 +30,8 @@ export class SpectralLayout<T> {
             A.set(targetIndex, sourceIndex, 1);
         });
 
-        // calculate node degrees
-        const D = RealMatrix.diag(A.rowSum());
-
         // calculate graph Laplacian
-        const L = D.minus(A);
+        const L = RealMatrix.diag(A.rowSum()).minus(A);
 
         // perform eigenvalue decomposition
         const eigenresult = math.eigs(math.matrix(L.toArray()), 1e-15);
@@ -44,22 +41,64 @@ export class SpectralLayout<T> {
         // which if used as coordinates provide a good distribution of graph nodes
         const index = values.findIndex(value => value > 1e-15);
         const U = eigenresult.vectors;
-        const x = (math.squeeze(math.column(U, index)) as math.Matrix).toArray() as number[];
-        const y = (math.squeeze(math.column(U, index + 1)) as math.Matrix).toArray() as number[];
+        const positions = Vector.combine(
+            (math.squeeze(math.column(U, index)) as math.Matrix).toArray() as number[],
+            (math.squeeze(math.column(U, index + 1)) as math.Matrix).toArray() as number[]
+        );
+
+        const minimumDistance = 0.1;
+
+        // find co-located items
+        for (let i = 0; i < this.nodes.length; ++i) {
+            const source = positions[i]!;
+            const colocated = new Set<number>();
+            colocated.add(i);
+
+            for (let j = i + 1; j < this.nodes.length; ++j) {
+                const target = positions[j]!;
+                const distance = target.minus(source).magnitude();
+                if (distance < 1e-8) {
+                    colocated.add(j);
+                }
+            }
+
+            // more than one item occupies the same position
+            if (colocated.size > 1) {
+                // make space at location where co-located items are
+                for (let k = 0; k < this.nodes.length; ++k) {
+                    if (!colocated.has(k)) {
+                        const dir = positions[k]!.minus(source).normalize().multiply(2 * minimumDistance);
+                        positions[k]!.add(dir);
+                    }
+                }
+
+                // arrange co-located items in a circle
+                const n = colocated.size;
+                for (let [k, index] of colocated.entries()) {
+                    const dir = new Vector(Math.cos(index * 2 * Math.PI / n), Math.sin(index * 2 * Math.PI / n)).multiply(minimumDistance);
+                    positions[k]!.add(dir);
+                }
+            }
+        }
+
+        // find small distance between items
+        for (let i = 0; i < this.nodes.length; ++i) {
+            const source = positions[i]!;
+            for (let j = i + 1; j < this.nodes.length; ++j) {
+                const target = positions[j]!;
+                const distance = target.minus(source).magnitude();
+
+                if (distance < minimumDistance) {
+                    // push items apart that are too close to each other
+                    const mid = source.plus(target).multiply(0.5);
+                    for (let k = 0; k < this.nodes.length; ++k) {
+                        positions[k]!.add(positions[k]!.minus(mid).normalize().multiply(minimumDistance));
+                    }
+                }
+            }
+        }
 
         // rescale to unit range
-        const minX = math.min(x);
-        const maxX = math.max(x);
-        const minY = math.min(y);
-        const maxY = math.max(y);
-
-        const points: Point[] = Array(this.nodes.length);
-        for (let k = 0; k < this.nodes.length; ++k) {
-            points[k] = new Point(
-                (x[k]! - minX) / (maxX - minX),
-                (y[k]! - minY) / (maxY - minY)
-            );
-        }
-        return points;
+        return Vector.rescale(positions);
     }
 }

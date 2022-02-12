@@ -15,6 +15,19 @@ export interface Coordinate {
 
 export class Point implements Coordinate {
     constructor(public x: number, public y: number) { }
+
+    static combine(x: number[], y: number[]): Point[] {
+        if (x.length != y.length) {
+            throw RangeError("input array size mismatch");
+        }
+
+        const points: Point[] = new Array(x.length);
+        const len = x.length;
+        for (let k = 0; k < len; ++k) {
+            points[k] = new Point(x[k]!, y[k]!);
+        }
+        return points;
+    }
 }
 
 export class Vector implements Coordinate {
@@ -22,6 +35,38 @@ export class Vector implements Coordinate {
 
     static from(p: Coordinate): Vector {
         return new Vector(p.x, p.y);
+    }
+
+    static combine(x: number[], y: number[]): Vector[] {
+        if (x.length != y.length) {
+            throw RangeError("input array size mismatch");
+        }
+
+        const vectors = [];
+        const len = x.length;
+        for (let k = 0; k < len; ++k) {
+            vectors.push(new Vector(x[k]!, y[k]!));
+        }
+        return vectors;
+    }
+
+    static rescale(vectors: Vector[]): Vector[] {
+        if (vectors.length > 0) {
+            const vector = vectors[0]!;
+            const minX = vectors.reduce((prev, v) => Math.min(prev, v.x), vector.x);
+            const maxX = vectors.reduce((prev, v) => Math.max(prev, v.x), vector.x);
+            const minY = vectors.reduce((prev, v) => Math.min(prev, v.y), vector.y);
+            const maxY = vectors.reduce((prev, v) => Math.max(prev, v.y), vector.y);
+
+            return vectors.map(v => {
+                return new Vector(
+                    (v.x - minX) / (maxX - minX),
+                    (v.y - minY) / (maxY - minY)
+                );
+            });
+        } else {
+            return [];
+        }
     }
 
     /** The length of the vector. */
