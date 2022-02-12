@@ -7,8 +7,9 @@
  * @see     https://hunyadi.info.hu/
  **/
 
-import { Arrow, Diagram, Movable } from "./diagram";
+import { Arrow, Diagram } from "./diagram";
 import { ElasticLayout, ElasticLayoutOptions } from "./elastic";
+import { Movable } from "./movable";
 import { SpectralLayout } from "./spectral";
 import TabPanel from "./tabpanel";
 
@@ -140,7 +141,7 @@ class ElasticEntityDiagram extends EntityDiagram {
 
         let elasticLayout = new ElasticLayout(
             options,
-            this.diagram.getHost(),
+            this.diagram.host,
             elements,
             (elem1, elem2) => { return this.diagram.isConnected(elem1, elem2); }
         );
@@ -154,7 +155,7 @@ class NavigableEntityDiagram extends EntityDiagram {
     constructor(elem: HTMLElement, data: EntityRelationshipData) {
         super(elem, data);
         elem.classList.add("navigable");
-        this.selector = this.diagram.getHost().querySelector("select")!;
+        this.selector = this.diagram.host.querySelector("select")!;
 
         this.data.entities.forEach(entity => {
             entity.head.addEventListener("click", event => {
@@ -187,9 +188,9 @@ class NavigableEntityDiagram extends EntityDiagram {
     private display(entity: Entity): void {
         this.diagram.clear();
 
-        const leftPanel = this.diagram.getHost().querySelector(".left")!;
-        const centerPanel = this.diagram.getHost().querySelector(".center")!;
-        const rightPanel = this.diagram.getHost().querySelector(".right")!;
+        const leftPanel = this.diagram.host.querySelector(".left")!;
+        const centerPanel = this.diagram.host.querySelector(".center")!;
+        const rightPanel = this.diagram.host.querySelector(".right")!;
 
         const visible = new Set<Entity>();
 
@@ -249,8 +250,10 @@ class SpectralEntityDiagram extends EntityDiagram {
 
         for (let [k, entity] of this.data.entities.entries()) {
             const element = entity.element;
-            element.style.left = 100 * points[k]!.x + "%";
-            element.style.top = 100 * points[k]!.y + "%";
+            const x = points[k]!.x;
+            const y = points[k]!.y;
+            element.style.left = (80 * x + 10) + "%";
+            element.style.top = (80 * y + 10) + "%";
         }
     }
 }

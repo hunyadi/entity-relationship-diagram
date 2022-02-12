@@ -7,7 +7,7 @@
  * @see     https://hunyadi.info.hu/
  **/
 
-import { Coordinate, Point, Rect } from "./geometry";
+import { Point, Rect } from "./geometry";
 import { createSVGElement, FirstVisibleAncestor } from "./htmldom";
 
 abstract class Shape {
@@ -50,9 +50,22 @@ abstract class Connector extends Shape {
     abstract draw(diagram: Diagram, checker: FirstVisibleAncestor): void;
 }
 
+/**
+ * Produces a unique identifier.
+ * @param len The number of random characters to generate.
+ * @returns An alphanumeric sequence.
+ */
+function getUniqueIdentifier(len = 8) {
+    const base = 36;
+    return Array.from(
+        { length: len },
+        () => Math.floor(base * Math.random()).toString(base)
+    ).join("")
+}
+
 export class Diagram {
     /** The host element that contains other elements between which connections can be made. */
-    private host: HTMLDivElement;
+    public host: HTMLDivElement;
 
     /** The SVG element that encapsulates connectors in a separate layer. */
     private svg: SVGSVGElement;
@@ -72,9 +85,10 @@ export class Diagram {
     /** Listens to removing elements from the diagram. */
     private childObserver: MutationObserver;
 
+    /** True if the diagram is to be redrawn in the next paint cycle. */
     private repainting: boolean = false;
 
-    readonly markerId: string = Math.floor(Math.random() * Math.pow(36, 6)).toString(36);
+    readonly markerId: string = getUniqueIdentifier();
     readonly markerWidth: number = 10;
     readonly markerHeight: number = 7;
 
@@ -83,6 +97,7 @@ export class Diagram {
      * @param container The container element that is to wrap the item host layer and the drawing layer.
      */
     constructor(container: HTMLElement) {
+        // grab current children of container element
         const fragment = document.createDocumentFragment();
         Array.from(container.children).forEach(child => {
             fragment.append(child);
@@ -90,19 +105,26 @@ export class Diagram {
 
         // set up drawing layer for connectors
         this.svg = createSVGElement("svg") as SVGSVGElement;
-        this.svg.innerHTML = `<defs><marker id="${this.markerId}" markerWidth="${this.markerWidth}" markerHeight="${this.markerHeight}" refX="${this.markerWidth}" refY="${this.markerHeight / 2}" orient="auto"><polygon points="0 0, ${this.markerWidth} ${this.markerHeight / 2}, 0 ${this.markerHeight}" /></marker></defs>`;
+        this.svg.innerHTML = '<defs>' +
+            `<marker id="${this.markerId}" markerWidth="${this.markerWidth}" markerHeight="${this.markerHeight}" refX="${this.markerWidth}" refY="${this.markerHeight / 2}" orient="auto">` +
+            `<polygon points="0 0, ${this.markerWidth} ${this.markerHeight / 2}, 0 ${this.markerHeight}" />` +
+            '</marker>' +
+            '</defs>';
         container.append(this.svg);
 
-        // set up item host layer
+        // set up item host layer in which connectable elements reside
         this.host = document.createElement("div");
         this.host.append(fragment);
         container.append(this.host);
 
+        // set up observers to monitor size, position and visibility changes
         const observer = new ResizeObserver(this.redraw.bind(this));
         observer.observe(this.host);
 
         this.resizeObserver = new ResizeObserver(this.redraw.bind(this));
         this.styleObserver = new MutationObserver(this.redraw.bind(this));
+
+        // set up observer to monitor removing dangling connectors
         this.childObserver = new MutationObserver(mutationsList => {
             let unattachedConnectors: Set<Connector> = new Set();
 
@@ -125,12 +147,26 @@ export class Diagram {
         this.clear();
     }
 
+    /**
+     * Checks if a source element (or one of its descendants) is connected to a target element (or one of its descendants).
+     * Aware of connection directionality.
+     * @param source The source element whose DOM subtree to check.
+     * @param target The target element whose DOM subtree to check.
+     * @returns True if the elements are connected at some level in the DOM hierarchy.
+     */
     isConnectedTo(source: HTMLElement, target: HTMLElement): boolean {
         return this.connectors.some(connector => {
             return source.contains(connector.source) && target.contains(connector.target);
         });
     }
 
+    /**
+     * Checks if an element (or one of its descendants) is connected to another element (or one of its descendants).
+     * Oblivious to connection directionality.
+     * @param elem1 One of the elements whose DOM subtree to check.
+     * @param elem2 One of the elements whose DOM subtree to check.
+     * @returns True if the elements are connected at some level in the DOM hierarchy.
+     */
     isConnected(elem1: HTMLElement, elem2: HTMLElement): boolean {
         return this.isConnectedTo(elem1, elem2) || this.isConnectedTo(elem2, elem1);
     }
@@ -202,10 +238,6 @@ export class Diagram {
             rect.right - refRect.left,
             rect.bottom - refRect.top
         );
-    }
-
-    getHost(): HTMLElement {
-        return this.host;
     }
 
     shuffle(): void {
@@ -315,42 +347,5 @@ export class Arrow extends Connector {
         const curve = `M${sourcePt.x} ${sourcePt.y} C${sourceCtlPt.x} ${sourceCtlPt.y} ${targetCtlPt.x} ${targetCtlPt.y} ${targetPt.x} ${targetPt.y}`;
         this.path.setAttribute("d", curve);
         this.path.setAttribute("marker-end", `url(#${diagram.markerId})`);
-    }
-}
-
-/**
- * Permits an element to be moved with mouse drag.
- *
- * The left and top style attributes of the dragged element are set with !important to ensure it's not repositioned
- * while the action is taking place.
- */
-export class Movable {
-    private mousePos: Coordinate = new Point(0, 0);
-    private elementPos: Coordinate = new Point(0, 0);
-
-    private mouseMoveListener = (event: MouseEvent) => {
-        event.preventDefault();
-        const deltaX = event.clientX - this.mousePos.x;
-        const deltaY = event.clientY - this.mousePos.y;
-        this.element.style.setProperty("left", (this.elementPos.x + deltaX) + "px", "important");
-        this.element.style.setProperty("top", (this.elementPos.y + deltaY) + "px", "important");
-    };
-
-    constructor(private element: HTMLElement) {
-        element.addEventListener("mousedown", event => {
-            this.mousePos = new Point(event.clientX, event.clientY);
-
-            document.addEventListener("mouseup", event => {
-                document.removeEventListener("mousemove", this.mouseMoveListener, true);
-
-                const deltaX = event.clientX - this.mousePos.x;
-                const deltaY = event.clientY - this.mousePos.y;
-                this.element.style.setProperty("left", (this.elementPos.x + deltaX) + "px");
-                this.element.style.setProperty("top", (this.elementPos.y + deltaY) + "px");
-            }, { "capture": true, "once": true });
-            document.addEventListener("mousemove", this.mouseMoveListener, true);
-
-            this.elementPos = new Point(element.offsetLeft, element.offsetTop);
-        }, true);
     }
 }

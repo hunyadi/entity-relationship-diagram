@@ -11,23 +11,32 @@ body > .tab-panel {
     flex-direction: column;
 }
 
+.tab-panel > .tab-selector {
+    margin-top: 3px;
+    padding: 0 3px;
+    border-bottom: black solid thin;
+}
+
 .tab-panel > .tab-selector > * {
     display: inline-block;
-    margin: 3px 0;
     border: black solid thin;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
     padding: 2px;
     cursor: pointer;
+    opacity: 0.25;
+}
+
+.tab-panel > .tab-selector > .tab-active {
+    opacity: 1;
 }
 
 .tab-panel > .tab-view {
     flex: 1;
-}
-
-.tab-view {
     position: relative;
 }
 
-.tab-view > * {
+.tab-panel > .tab-view > * {
     visibility: hidden;
     position: absolute !important;
     box-sizing: border-box;
@@ -35,7 +44,7 @@ body > .tab-panel {
     height: 100%;
 }
 
-.tab-view > .tab-active {
+.tab-panel > .tab-view > .tab-active {
     visibility: visible;
 }
 
