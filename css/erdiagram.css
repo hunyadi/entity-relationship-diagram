@@ -59,8 +59,9 @@ body > .tab-panel {
     height: 100%;
 }
 
-.diagram > div .selected {
+.diagram > div > .selected {
     border: 2px solid red;
+    z-index: 1;
 }
 
 .diagram > svg > path {
@@ -68,23 +69,23 @@ body > .tab-panel {
     fill: transparent;
 }
 
-.diagram > svg > path.source-selected {
+.diagram.canvaslike > svg > path.source-selected {
     stroke: red;
 }
 
-.diagram > svg > path.target-selected {
+.diagram.canvaslike > svg > path.target-selected {
     stroke: green;
 }
 
-.diagram > svg > defs > marker.regular > polygon {
+.diagram > svg > defs > marker > polygon {
     fill: black;
 }
 
-.diagram > svg > defs > marker.source-selected > polygon {
+.diagram.canvaslike > svg > defs > marker.source-selected > polygon {
     fill: red;
 }
 
-.diagram > svg > defs > marker.target-selected > polygon {
+.diagram.canvaslike > svg > defs > marker.target-selected > polygon {
     fill: green;
 }
 
@@ -111,11 +112,16 @@ table.entity > thead > tr:first-child {
 
 table.entity > thead span.toggle {
     width: 10px;
-    height: 10px;
+    height: 7.71px;
+    margin: 3px;
     float: right;
-    background-color: white;
-    margin: 2px;
-    border: thin solid black;
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-image: url(arrow-up.svg);
+}
+
+table.entity > thead span.toggle.collapsed {
+    background-image: url(arrow-down.svg);
 }
 
 table.entity > tbody > tr:nth-child(odd) {
@@ -132,6 +138,14 @@ table.entity td {
 
 table.entity span.entity-property-name {
     font-weight: bold;
+}
+
+.diagram.navigable span.entity-name {
+    cursor: pointer;
+}
+
+.diagram.navigable span.entity-name:hover {
+    color: blue;
 }
 
 .navigator {

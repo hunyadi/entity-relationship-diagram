@@ -375,15 +375,13 @@ export class Arrow extends Connector {
         const curve = `M${sourcePt.x} ${sourcePt.y} C${sourceCtlPt.x} ${sourceCtlPt.y} ${targetCtlPt.x} ${targetCtlPt.y} ${targetPt.x} ${targetPt.y}`;
         this.path.setAttribute("d", curve);
 
-        let markerId;
+        let markerId = diagram.markers.get(MarkerState.Regular);
         if (selected.get(this.source)) {
             this.path.classList.add("source-selected");
             markerId = diagram.markers.get(MarkerState.SourceSelected);
         } else if (selected.get(this.target)) {
             this.path.classList.add("target-selected");
             markerId = diagram.markers.get(MarkerState.TargetSelected);
-        } else {
-            markerId = diagram.markers.get(MarkerState.Regular);
         }
         this.path.setAttribute("marker-end", `url(#${markerId})`);
     }

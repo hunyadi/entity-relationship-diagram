@@ -82,13 +82,12 @@ class EntityElement implements Renderable {
             const propType = `<span class="entity-property-type">${prop.type}</span>`;
             rows.push(`<tr><td data-property="${name}">${propName}: ${propType}</td></tr>`);
         }
-        this.elem.innerHTML = `<thead><tr><th>${this.name} <span class="toggle"></span></th></tr></thead><tbody>` + rows.join("") + "</tbody>";
+        this.elem.innerHTML = `<thead><tr><th><span class="entity-name">${this.name}</span> <span class="toggle"></span></th></tr></thead><tbody>` + rows.join("") + "</tbody>";
 
-        const toggler = this.elem.querySelector("thead>tr>th>span.toggle")!;
-        toggler.addEventListener("click", (event) => {
+        this.toggler.addEventListener("click", (event) => {
             event.preventDefault();
             event.stopPropagation();
-            this.compact();
+            this.compact(!this.toggler.classList.contains("collapsed"));
         });
     }
 
@@ -96,7 +95,7 @@ class EntityElement implements Renderable {
         return this.elem;
     }
 
-    public get head(): HTMLElement {
+    private get head(): HTMLElement {
         return this.elem.querySelector("thead")!;
     }
 
@@ -104,8 +103,17 @@ class EntityElement implements Renderable {
         return this.elem.querySelector("tbody")!;
     }
 
-    compact(state?: boolean | undefined) {
+    private get toggler(): HTMLElement {
+        return this.elem.querySelector("thead>tr>th>span.toggle")!;
+    }
+
+    get heading(): HTMLElement {
+        return this.head.querySelector("span.entity-name")!;
+    }
+
+    compact(state: boolean) {
         this.body.classList.toggle("hidden", state);
+        this.toggler.classList.toggle("collapsed", state);
     }
 
     property(id: string): EntityPropertyElement {
@@ -173,6 +181,7 @@ class EntityDiagram {
 class ElasticEntityDiagram extends EntityDiagram {
     constructor(elem: HTMLElement, data: EntityRelationshipData, options: ElasticLayoutOptions) {
         super(elem, data);
+        elem.classList.add("canvaslike");
         elem.classList.add("elastic");
 
         this.layout(options);
@@ -187,7 +196,6 @@ class ElasticEntityDiagram extends EntityDiagram {
         this.relationships.forEach(relationship => {
             this.diagram.addConnector(new Arrow(relationship.source.element, relationship.target.element));
         });
-        this.diagram.shuffle();
 
         // perform an initial layout
         const elements = Array.from(this.entities.values()).map(entity => { return entity.element; });
@@ -224,7 +232,7 @@ class NavigableEntityDiagram extends EntityDiagram {
 
         this.entities.forEach(entity => {
             entity.compact(false);
-            entity.head.addEventListener("click", event => {
+            entity.heading.addEventListener("click", event => {
                 event.preventDefault();
                 this.show(entity);
             });
@@ -294,6 +302,7 @@ class NavigableEntityDiagram extends EntityDiagram {
 class SpectralEntityDiagram extends EntityDiagram {
     constructor(elem: HTMLElement, data: EntityRelationshipData) {
         super(elem, data);
+        elem.classList.add("canvaslike");
         elem.classList.add("spectral");
 
         this.entities.forEach(entity => {
