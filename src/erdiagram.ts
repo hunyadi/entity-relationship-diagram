@@ -14,24 +14,42 @@ import { SpectralLayout } from "./spectral";
 import TabPanel from "./tabpanel";
 
 
-declare interface Renderable {
-    get element(): Element;
-}
-
 declare interface EntityProperty {
     readonly name: string;
     readonly type: string;
 }
 
 declare interface EntityDescriptor {
-    readonly name: string;
     readonly properties: EntityProperty[];
 }
 
-class EntityElement implements Renderable {
+declare interface EntityDictionary {
+    readonly [key: string]: EntityDescriptor;
+}
+
+declare interface EntityPropertyAccess {
+    readonly entity: string;
+    readonly property: string;
+}
+
+declare interface EntityRelationship {
+    readonly source: EntityPropertyAccess;
+    readonly target: EntityPropertyAccess;
+}
+
+declare interface EntityRelationshipData {
+    entities: EntityDictionary;
+    relationships: EntityRelationship[];
+}
+
+interface Renderable {
+    get element(): Element;
+}
+
+class EntityPropertyElement implements Renderable {
     private elem: HTMLTableCellElement;
 
-    constructor(private entity: Entity, propertyName: string) {
+    constructor(private entity: EntityElement, propertyName: string) {
         this.elem = entity.element.querySelector(`td[data-property="${propertyName}"]`)!;
     }
 
@@ -39,22 +57,18 @@ class EntityElement implements Renderable {
         return this.elem;
     }
 
-    public get parent(): Entity {
+    public get parent(): EntityElement {
         return this.entity;
     }
-}
-
-declare interface PropertyAccessor {
-    property(id: string): EntityElement;
 }
 
 /**
  * Represents an entity in an entity relationship diagram (ERD).
  */
-export class Entity implements PropertyAccessor, Renderable {
+class EntityElement implements Renderable {
     private elem: HTMLTableElement;
 
-    constructor(private descriptor: EntityDescriptor) {
+    constructor(public name: string, descriptor: EntityDescriptor) {
         this.elem = document.createElement("table");
         this.elem.classList.add("entity");
         const rows = descriptor.properties.map(property => {
@@ -62,19 +76,14 @@ export class Entity implements PropertyAccessor, Renderable {
             const propType = `<span class="entity-property-type">${property.type}</span>`;
             return `<tr><td data-property="${property.name}">${propName}: ${propType}</td></tr>`;
         });
-        this.elem.innerHTML = `<thead><tr><th>${descriptor.name} <span class="toggle"></span></th></tr></thead><tbody>` + rows.join("") + "</tbody>";
+        this.elem.innerHTML = `<thead><tr><th>${this.name} <span class="toggle"></span></th></tr></thead><tbody>` + rows.join("") + "</tbody>";
 
         const toggle = this.elem.querySelector("thead>tr>th>span.toggle")!;
-        const body = this.elem.querySelector("tbody")!;
         toggle.addEventListener("click", (event) => {
             event.preventDefault();
             event.stopPropagation();
-            body.classList.toggle("hidden");
+            this.body.classList.toggle("hidden");
         });
-    }
-
-    public get name(): string {
-        return this.descriptor.name;
     }
 
     public get element(): HTMLElement {
@@ -85,24 +94,38 @@ export class Entity implements PropertyAccessor, Renderable {
         return this.elem.querySelector("thead")!;
     }
 
-    property(id: string): EntityElement {
-        return new EntityElement(this, id);
+    public get body(): HTMLElement {
+        return this.elem.querySelector("body")!;
+    }
+
+    property(id: string): EntityPropertyElement {
+        return new EntityPropertyElement(this, id);
     }
 }
 
-export class EntityRelationship {
-    constructor(public source: EntityElement, public target: EntityElement) { }
-}
-
-declare interface EntityRelationshipData {
-    entities: Entity[];
-    relationships: EntityRelationship[];
+class EntityRelationshipElement {
+    constructor(public source: EntityPropertyElement, public target: EntityPropertyElement) { }
 }
 
 class EntityDiagram {
     protected diagram: Diagram;
+    protected entities = new Map<string, EntityElement>();
+    protected relationships: EntityRelationshipElement[] = [];
 
-    constructor(elem: HTMLElement, protected data: EntityRelationshipData) {
+    constructor(elem: HTMLElement, data: EntityRelationshipData) {
+        for (const [name, descriptor] of Object.entries(data.entities)) {
+            const entity = new EntityElement(name, descriptor);
+            this.entities.set(name, entity);
+        }
+
+        data.relationships.forEach(relationship => {
+            const sourceEntity = this.entities.get(relationship.source.entity)!;
+            const sourceProperty = sourceEntity.property(relationship.source.property);
+            const targetEntity = this.entities.get(relationship.target.entity)!;
+            const targetProperty = targetEntity.property(relationship.target.property);
+            this.relationships.push(new EntityRelationshipElement(sourceProperty, targetProperty));
+        });
+
         this.diagram = new Diagram(elem);
         elem.classList.add("diagram");
     }
@@ -117,17 +140,18 @@ class ElasticEntityDiagram extends EntityDiagram {
     }
 
     private layout(options: ElasticLayoutOptions): void {
-        this.data.entities.forEach(entity => {
+        this.entities.forEach(entity => {
             this.diagram.addElement(entity.element);
             new Movable(entity.element);
         });
-        this.data.relationships.forEach(relationship => {
+        this.relationships.forEach(relationship => {
             this.diagram.addConnector(new Arrow(relationship.source.element, relationship.target.element));
         });
         this.diagram.shuffle();
 
-        const elements = this.data.entities.map(entity => { return entity.element; });
-        const edges = this.data.relationships.map(relationship => {
+        // perform an initial layout
+        const elements = Array.from(this.entities.values()).map(entity => { return entity.element; });
+        const edges = this.relationships.map(relationship => {
             return { source: relationship.source.parent.element, target: relationship.target.parent.element };
         });
 
@@ -139,6 +163,7 @@ class ElasticEntityDiagram extends EntityDiagram {
             element.style.top = 100 * points[k]!.y + "%";
         }
 
+        // refine initial layout
         let elasticLayout = new ElasticLayout(
             options,
             this.diagram.host,
@@ -157,7 +182,7 @@ class NavigableEntityDiagram extends EntityDiagram {
         elem.classList.add("navigable");
         this.selector = this.diagram.host.querySelector("select")!;
 
-        this.data.entities.forEach(entity => {
+        this.entities.forEach(entity => {
             entity.head.addEventListener("click", event => {
                 event.preventDefault();
                 this.show(entity);
@@ -168,37 +193,35 @@ class NavigableEntityDiagram extends EntityDiagram {
             this.selector.append(option);
         });
         this.selector.addEventListener("change", () => {
-            const selected = this.data.entities.find(entity => {
-                return entity.name == this.selector.value;
-            });
+            const selected = this.entities.get(this.selector.value);
             if (selected) {
                 this.display(selected);
             }
         });
-        if (this.data.entities.length > 0) {
-            this.display(this.data.entities[0]!);
+        if (this.entities.size > 0) {
+            this.display(this.entities.values().next().value);
         }
     }
 
-    show(entity: Entity): void {
+    show(entity: EntityElement): void {
         this.selector.value = entity.name;
         this.display(entity);
     }
 
-    private display(entity: Entity): void {
+    private display(entity: EntityElement): void {
         this.diagram.clear();
 
         const leftPanel = this.diagram.host.querySelector(".left")!;
         const centerPanel = this.diagram.host.querySelector(".center")!;
         const rightPanel = this.diagram.host.querySelector(".right")!;
 
-        const visible = new Set<Entity>();
+        const visible = new Set<EntityElement>();
 
         centerPanel.append(entity.element);
         this.diagram.addElement(entity.element);
 
         // add entities to diagram connected by a relationship
-        this.data.relationships.forEach(relationship => {
+        this.relationships.forEach(relationship => {
             let updated = false;
             if (relationship.source.parent == entity && relationship.target.parent == entity) {
                 updated = true;
@@ -232,91 +255,30 @@ class SpectralEntityDiagram extends EntityDiagram {
         super(elem, data);
         elem.classList.add("spectral");
 
-        this.data.entities.forEach(entity => {
+        this.entities.forEach(entity => {
             this.diagram.addElement(entity.element);
             new Movable(entity.element);
         });
 
-        this.data.relationships.forEach(relationship => {
+        this.relationships.forEach(relationship => {
             this.diagram.addConnector(new Arrow(relationship.source.element, relationship.target.element));
         });
 
-        const edges = this.data.relationships.map(relationship => {
+        const nodes = Array.from(this.entities.values());
+        const edges = this.relationships.map(relationship => {
             return { source: relationship.source.parent, target: relationship.target.parent };
         });
 
-        const layout = new SpectralLayout(this.data.entities, edges);
+        const layout = new SpectralLayout(nodes, edges);
         const points = layout.calculate();
 
-        for (let [k, entity] of this.data.entities.entries()) {
+        nodes.forEach((entity, index) => {
             const element = entity.element;
-            const x = points[k]!.x;
-            const y = points[k]!.y;
+            const x = points[index]!.x;
+            const y = points[index]!.y;
             element.style.left = (80 * x + 10) + "%";
             element.style.top = (80 * y + 10) + "%";
-        }
-    }
-}
-
-export class EntityGraph {
-    /** Maps entities to their neighbors. */
-    private graph = new Map<Entity, Set<Entity>>();
-
-    constructor(relationships: EntityRelationship[]) {
-        relationships.forEach(relationship => {
-            const source = relationship.source.parent;
-            const target = relationship.target.parent;
-            if (source !== target) {  // ignore loops to self
-                let neighbors = this.graph.get(source);
-                if (neighbors !== undefined) {
-                    neighbors.add(target);  // ignore parallel edges to same node
-                } else {
-                    neighbors = new Set();
-                    neighbors.add(target);  // ignore parallel edges to same node
-                    this.graph.set(source, neighbors);
-                }
-            }
         });
-    }
-
-    shortestPath(source: Entity, target: Entity): Entity[] | undefined {
-        const queue: Entity[] = [source];
-        const predecessor = new Map<Entity, Entity>();
-        const visited = new Set<Entity>();
-        visited.add(source);
-
-        while (queue.length > 0) {
-            const u = queue.shift()!;
-            const neighbors = this.graph.get(u);
-            if (!neighbors) {
-                continue;
-            }
-
-            for (const v of neighbors) {
-                if (visited.has(v)) {
-                    continue;
-                }
-
-                visited.add(v);
-                if (v === target) {  // check if the path is complete
-                    let path = [v];
-
-                    // backtrack through the path
-                    let p = u;
-                    while (p !== source) {
-                        path.push(p);
-                        p = predecessor.get(p)!;
-                    }
-                    path.push(p);
-                    path.reverse();
-                    return path;
-                }
-
-                predecessor.set(v, u);
-                queue.push(v);
-            }
-        }
-        return undefined;
     }
 }
 
@@ -324,8 +286,6 @@ export class EntityGraph {
  * An interface that prevents name mangling for factory functions when TypeScript code is fed to the Closure Compiler.
  */
 declare interface EntityRelationshipFactory {
-    createEntity(descriptor: EntityDescriptor): Entity;
-    createRelationship(source: EntityElement, target: EntityElement): EntityRelationship;
     createElasticDiagram(elem: HTMLElement, data: EntityRelationshipData, options: ElasticLayoutOptions): ElasticEntityDiagram;
     createNavigableDiagram(elem: HTMLElement, data: EntityRelationshipData): NavigableEntityDiagram;
     createSpectralDiagram(elem: HTMLElement, data: EntityRelationshipData): SpectralEntityDiagram;
@@ -335,14 +295,6 @@ declare interface EntityRelationshipFactory {
  * The concrete implementation of the factory function interface.
  */
 class EntityRelationshipFactoryImpl implements EntityRelationshipFactory {
-    createEntity(descriptor: EntityDescriptor): Entity {
-        return new Entity(descriptor);
-    }
-
-    createRelationship(source: EntityElement, target: EntityElement): EntityRelationship {
-        return new EntityRelationship(source, target);
-    }
-
     createElasticDiagram(elem: HTMLElement, data: EntityRelationshipData, options: ElasticLayoutOptions): ElasticEntityDiagram {
         return new ElasticEntityDiagram(elem, data, options);
     }

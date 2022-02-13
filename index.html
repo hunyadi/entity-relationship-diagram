@@ -10,66 +10,77 @@
 
     <script defer="defer">
         function getSimpleSetup() {
-            let city = erd.createEntity({
-                name: "City",
-                properties: [
-                    { name: "id", type: "int" },
-                    { name: "name", type: "string" },
-                ]
-            });
-            let address = erd.createEntity({
-                name: "Address",
-                properties: [
-                    { name: "id", type: "bigint" },
-                    { name: "zip", type: "decimal(4)" },
-                    { name: "city_id", type: "int" },
-                    { name: "street", type: "string" },
-                    { name: "number", type: "decimal" },
-                ]
-            });
-            let person = erd.createEntity({
-                name: "Person",
-                properties: [
-                    { name: "id", type: "bigint" },
-                    { name: "family_name", type: "string" },
-                    { name: "given_name", type: "string" },
-                    { name: "perm_address_id", type: "bigint" },
-                    { name: "temp_address_id", type: "bigint" },
-                    { name: "manager_id", type: "bigint" },
-                ]
-            });
-
-            const entities = [city, address, person];
-            const relationships = [];
-            relationships.push(erd.createRelationship(address.property("city_id"), city.property("id")));
-            relationships.push(erd.createRelationship(person.property("perm_address_id"), address.property("id")));
-            relationships.push(erd.createRelationship(person.property("temp_address_id"), address.property("id")));
-            relationships.push(erd.createRelationship(person.property("manager_id"), person.property("id")));
-
-            return { entities, relationships };
+            return {
+                entities: {
+                    "City": {
+                        properties: [
+                            { name: "id", type: "int" },
+                            { name: "name", type: "string" },
+                        ]
+                    },
+                    "Address": {
+                        properties: [
+                            { name: "id", type: "bigint" },
+                            { name: "zip", type: "decimal(4)" },
+                            { name: "city_id", type: "int" },
+                            { name: "street", type: "string" },
+                            { name: "number", type: "decimal" },
+                        ]
+                    },
+                    "Person": {
+                        properties: [
+                            { name: "id", type: "bigint" },
+                            { name: "family_name", type: "string" },
+                            { name: "given_name", type: "string" },
+                            { name: "perm_address_id", type: "bigint" },
+                            { name: "temp_address_id", type: "bigint" },
+                            { name: "manager_id", type: "bigint" },
+                        ]
+                    },
+                },
+                relationships: [
+                    {
+                        source: { entity: "Address", property: "city_id" },
+                        target: { entity: "City", property: "id" },
+                    },
+                    {
+                        source: { entity: "Person", property: "perm_address_id" },
+                        target: { entity: "Address", property: "id" },
+                    },
+                    {
+                        source: { entity: "Person", property: "temp_address_id" },
+                        target: { entity: "Address", property: "id" },
+                    },
+                    {
+                        source: { entity: "Person", property: "manager_id" },
+                        target: { entity: "Person", property: "id" },
+                    },
+                ],
+            };
         }
 
         function getComplexSetup() {
             const count = 20;
 
-            const entities = [];
+            const entities = {};
             for (let i = 0; i < count; ++i) {
-                let entity = erd.createEntity({
-                    name: "entity" + i,
+                entities["entity" + i] = {
                     properties: [
                         { name: "a", type: "T1" },
                         { name: "b", type: "T2" },
                         { name: "c", type: "T3" }
                     ]
-                });
-                entities.push(entity);
+                };
             }
 
             const relationships = [];
-            for (let i = 0; i < count; ++i) {
-                for (let j = 0; j < count; ++j) {
+            for (const sourceName of Object.keys(entities)) {
+                for (const targetName of Object.keys(entities)) {
                     if (Math.random() > 0.9) {
-                        relationships.push(erd.createRelationship(entities[i].property("a"), entities[j].property("b")));
+                        relationships.push({
+                            source: { entity: sourceName, property: "a" },
+                            target: { entity: targetName, property: "b" },
+                        });
                     }
                 }
             }
@@ -78,7 +89,7 @@
         }
 
         function displayElasticDiagram(setup) {
-            diagram = erd.createElasticDiagram(document.getElementById("elastic-diagram"), setup(), {
+            diagram = erd.createElasticDiagram(document.getElementById("elastic-diagram"), setup, {
                 charge: 1000,
                 stiffness: 0.2,
                 drag: 0.5,
@@ -88,15 +99,15 @@
         }
 
         function displayNavigableDiagram(setup) {
-            diagram = erd.createNavigableDiagram(document.getElementById("navigable-diagram"), setup());
+            diagram = erd.createNavigableDiagram(document.getElementById("navigable-diagram"), setup);
         }
 
         function displaySpectralDiagram(setup) {
-            diagram = erd.createSpectralDiagram(document.getElementById("spectral-diagram"), setup());
+            diagram = erd.createSpectralDiagram(document.getElementById("spectral-diagram"), setup);
         }
 
         document.addEventListener("DOMContentLoaded", () => {
-            const setup = getComplexSetup;
+            const setup = getComplexSetup();
             displayElasticDiagram(setup);
             displayNavigableDiagram(setup);
             displaySpectralDiagram(setup);
