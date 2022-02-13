@@ -14,17 +14,20 @@ import { SpectralLayout } from "./spectral";
 import TabPanel from "./tabpanel";
 
 
-declare interface EntityProperty {
-    readonly name: string;
+declare interface EntityPropertyFeatures {
     readonly type: string;
 }
 
-declare interface EntityDescriptor {
-    readonly properties: EntityProperty[];
+declare interface PropertyDictionary {
+    readonly [key: string]: EntityPropertyFeatures;
+}
+
+declare interface EntityFeatures {
+    readonly properties: PropertyDictionary;
 }
 
 declare interface EntityDictionary {
-    readonly [key: string]: EntityDescriptor;
+    readonly [key: string]: EntityFeatures;
 }
 
 declare interface EntityPropertyAccess {
@@ -68,14 +71,17 @@ class EntityPropertyElement implements Renderable {
 class EntityElement implements Renderable {
     private elem: HTMLTableElement;
 
-    constructor(public name: string, descriptor: EntityDescriptor) {
+    constructor(public name: string, properties: PropertyDictionary) {
         this.elem = document.createElement("table");
         this.elem.classList.add("entity");
-        const rows = descriptor.properties.map(property => {
-            const propName = `<span class="entity-property-name">${property.name}</span>`;
-            const propType = `<span class="entity-property-type">${property.type}</span>`;
-            return `<tr><td data-property="${property.name}">${propName}: ${propType}</td></tr>`;
-        });
+
+        // generate HTML DOM representation of entity
+        const rows: string[] = [];
+        for (const [name, prop] of Object.entries(properties)) {
+            const propName = `<span class="entity-property-name">${name}</span>`;
+            const propType = `<span class="entity-property-type">${prop.type}</span>`;
+            rows.push(`<tr><td data-property="${name}">${propName}: ${propType}</td></tr>`);
+        }
         this.elem.innerHTML = `<thead><tr><th>${this.name} <span class="toggle"></span></th></tr></thead><tbody>` + rows.join("") + "</tbody>";
 
         const toggler = this.elem.querySelector("thead>tr>th>span.toggle")!;
@@ -117,8 +123,10 @@ class EntityDiagram {
     protected relationships: EntityRelationshipElement[] = [];
 
     constructor(elem: HTMLElement, data: EntityRelationshipData) {
+        this.validate(data);
+
         for (const [name, descriptor] of Object.entries(data.entities)) {
-            const entity = new EntityElement(name, descriptor);
+            const entity = new EntityElement(name, descriptor.properties);
             this.entities.set(name, entity);
         }
 
@@ -132,6 +140,33 @@ class EntityDiagram {
 
         this.diagram = new Diagram(elem);
         elem.classList.add("diagram");
+    }
+
+    validate(data: EntityRelationshipData) {
+        data.relationships.forEach(relationship => {
+            const sourceEntity = data.entities[relationship.source.entity];
+            const targetEntity = data.entities[relationship.target.entity];
+            if (!sourceEntity || !targetEntity) {
+                EntityDiagram.error(relationship, "entity", sourceEntity, targetEntity);
+            }
+
+            const sourceProperty = sourceEntity.properties[relationship.source.property];
+            const targetProperty = targetEntity.properties[relationship.target.property];
+            if (!sourceProperty || !targetProperty) {
+                EntityDiagram.error(relationship, "property", sourceProperty, targetProperty);
+            }
+        });
+    }
+
+    private static error(relationship: EntityRelationship, kind: string, source: object | undefined, target: object | undefined): never {
+        let origin;
+        if (!source) {
+            origin = "source";
+        } else if (!target) {
+            origin = "target";
+        }
+        const context = `${relationship.source.entity}.${relationship.source.property} -> ${relationship.target.entity}.${relationship.target.property}`;
+        throw TypeError(`${origin} ${kind} not found for relationship [${context}]`);
     }
 }
 

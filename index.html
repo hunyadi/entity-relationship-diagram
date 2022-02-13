@@ -13,29 +13,29 @@
             return {
                 entities: {
                     "City": {
-                        properties: [
-                            { name: "id", type: "int" },
-                            { name: "name", type: "string" },
-                        ]
+                        properties: {
+                            "id": { type: "int" },
+                            "name": { type: "string" },
+                        }
                     },
                     "Address": {
-                        properties: [
-                            { name: "id", type: "bigint" },
-                            { name: "zip", type: "decimal(4)" },
-                            { name: "city_id", type: "int" },
-                            { name: "street", type: "string" },
-                            { name: "number", type: "decimal" },
-                        ]
+                        properties: {
+                            "id": { type: "bigint" },
+                            "zip": { type: "decimal(4)" },
+                            "city_id": { type: "int" },
+                            "street": { type: "string" },
+                            "number": { type: "decimal" },
+                        }
                     },
                     "Person": {
-                        properties: [
-                            { name: "id", type: "bigint" },
-                            { name: "family_name", type: "string" },
-                            { name: "given_name", type: "string" },
-                            { name: "perm_address_id", type: "bigint" },
-                            { name: "temp_address_id", type: "bigint" },
-                            { name: "manager_id", type: "bigint" },
-                        ]
+                        properties: {
+                            "id": { type: "bigint" },
+                            "family_name": { type: "string" },
+                            "given_name": { type: "string" },
+                            "perm_address_id": { type: "bigint" },
+                            "temp_address_id": { type: "bigint" },
+                            "manager_id": { type: "bigint" },
+                        }
                     },
                 },
                 relationships: [
@@ -65,11 +65,11 @@
             const entities = {};
             for (let i = 0; i < count; ++i) {
                 entities["entity" + i] = {
-                    properties: [
-                        { name: "a", type: "T1" },
-                        { name: "b", type: "T2" },
-                        { name: "c", type: "T3" }
-                    ]
+                    properties: {
+                        "a": { type: "T1" },
+                        "b": { type: "T2" },
+                        "c": { type: "T3" }
+                    }
                 };
             }
 
