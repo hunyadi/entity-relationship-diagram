@@ -78,11 +78,11 @@ class EntityElement implements Renderable {
         });
         this.elem.innerHTML = `<thead><tr><th>${this.name} <span class="toggle"></span></th></tr></thead><tbody>` + rows.join("") + "</tbody>";
 
-        const toggle = this.elem.querySelector("thead>tr>th>span.toggle")!;
-        toggle.addEventListener("click", (event) => {
+        const toggler = this.elem.querySelector("thead>tr>th>span.toggle")!;
+        toggler.addEventListener("click", (event) => {
             event.preventDefault();
             event.stopPropagation();
-            this.body.classList.toggle("hidden");
+            this.compact();
         });
     }
 
@@ -94,8 +94,12 @@ class EntityElement implements Renderable {
         return this.elem.querySelector("thead")!;
     }
 
-    public get body(): HTMLElement {
-        return this.elem.querySelector("body")!;
+    private get body(): HTMLElement {
+        return this.elem.querySelector("tbody")!;
+    }
+
+    compact(state?: boolean | undefined) {
+        this.body.classList.toggle("hidden", state);
     }
 
     property(id: string): EntityPropertyElement {
@@ -141,6 +145,7 @@ class ElasticEntityDiagram extends EntityDiagram {
 
     private layout(options: ElasticLayoutOptions): void {
         this.entities.forEach(entity => {
+            entity.compact(true);
             this.diagram.addElement(entity.element);
             new Movable(entity.element);
         });
@@ -183,6 +188,7 @@ class NavigableEntityDiagram extends EntityDiagram {
         this.selector = this.diagram.host.querySelector("select")!;
 
         this.entities.forEach(entity => {
+            entity.compact(false);
             entity.head.addEventListener("click", event => {
                 event.preventDefault();
                 this.show(entity);
@@ -256,6 +262,7 @@ class SpectralEntityDiagram extends EntityDiagram {
         elem.classList.add("spectral");
 
         this.entities.forEach(entity => {
+            entity.compact(true);
             this.diagram.addElement(entity.element);
             new Movable(entity.element);
         });

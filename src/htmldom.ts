@@ -19,7 +19,7 @@ class Memoizer<KeyType, ValueType> {
     get(item: KeyType): ValueType {
         let match = this.cache.get(item);
         if (match === undefined) {
-            match = this.compute(item)
+            match = this.compute(item);
             this.cache.set(item, match);
         }
         return match;
@@ -39,7 +39,20 @@ export class FirstVisibleAncestor extends Memoizer<HTMLElement, HTMLElement> {
                 e = e.parentElement;
             }
             return e;
-        })
+        });
+    }
+}
+
+export class IsAncestorSelected extends Memoizer<HTMLElement, boolean> {
+    constructor(diagram: HTMLElement) {
+        super((e: HTMLElement) => {
+            while (e != diagram && !e.classList.contains("selected")) {
+                e = e.parentElement as HTMLElement;
+            }
+
+            // has no selected ancestor if reached diagram root element
+            return (e != diagram);
+        });
     }
 }
 

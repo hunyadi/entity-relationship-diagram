@@ -8,7 +8,7 @@
  **/
 
 import { Point, Rect } from "./geometry";
-import { createSVGElement, FirstVisibleAncestor } from "./htmldom";
+import { createSVGElement, FirstVisibleAncestor, IsAncestorSelected } from "./htmldom";
 
 abstract class Shape {
     /**
@@ -47,7 +47,7 @@ abstract class Connector extends Shape {
     }
 
     /** Redraws the connector. */
-    abstract draw(diagram: Diagram, checker: FirstVisibleAncestor): void;
+    abstract draw(diagram: Diagram, visibility: FirstVisibleAncestor, selected: IsAncestorSelected): void;
 }
 
 /**
@@ -60,7 +60,13 @@ function getUniqueIdentifier(len = 8) {
     return Array.from(
         { length: len },
         () => Math.floor(base * Math.random()).toString(base)
-    ).join("")
+    ).join("");
+}
+
+const enum MarkerState {
+    Regular = "regular",
+    SourceSelected = "source-selected",
+    TargetSelected = "target-selected",
 }
 
 export class Diagram {
@@ -88,9 +94,9 @@ export class Diagram {
     /** True if the diagram is to be redrawn in the next paint cycle. */
     private repainting: boolean = false;
 
-    readonly markerId: string = getUniqueIdentifier();
     readonly markerWidth: number = 10;
     readonly markerHeight: number = 7;
+    readonly markers = new Map<MarkerState, string>();
 
     /**
      * Creates a diagram.
@@ -103,13 +109,8 @@ export class Diagram {
             fragment.append(child);
         });
 
-        // set up drawing layer for connectors
         this.svg = createSVGElement("svg") as SVGSVGElement;
-        this.svg.innerHTML = '<defs>' +
-            `<marker id="${this.markerId}" markerWidth="${this.markerWidth}" markerHeight="${this.markerHeight}" refX="${this.markerWidth}" refY="${this.markerHeight / 2}" orient="auto">` +
-            `<polygon points="0 0, ${this.markerWidth} ${this.markerHeight / 2}, 0 ${this.markerHeight}" />` +
-            '</marker>' +
-            '</defs>';
+        this.initializeConnectorLayer();
         container.append(this.svg);
 
         // set up item host layer in which connectable elements reside
@@ -147,6 +148,22 @@ export class Diagram {
         this.clear();
     }
 
+    private initializeConnectorLayer(): void {
+        this.markers.set(MarkerState.Regular, getUniqueIdentifier());
+        this.markers.set(MarkerState.SourceSelected, getUniqueIdentifier());
+        this.markers.set(MarkerState.TargetSelected, getUniqueIdentifier());
+
+        const defs = createSVGElement("defs");
+        const markerDefs: string[] = [];
+        for (let [state, id] of this.markers.entries()) {
+            const polygon = `<polygon fill="currentColor" points="0 0, ${this.markerWidth} ${this.markerHeight / 2}, 0 ${this.markerHeight}" />`;
+            const marker = `<marker id="${id}" class="${state}" markerWidth="${this.markerWidth}" markerHeight="${this.markerHeight}" refX="${this.markerWidth}" refY="${this.markerHeight / 2}" orient="auto">${polygon}</marker>`;
+            markerDefs.push(marker);
+        }
+        defs.innerHTML = markerDefs.join("");
+        this.svg.append(defs);
+    }
+
     /**
      * Checks if a source element (or one of its descendants) is connected to a target element (or one of its descendants).
      * Aware of connection directionality.
@@ -176,6 +193,13 @@ export class Diagram {
         if (!this.host.contains(element)) {
             this.host.append(element);
         }
+
+        element.addEventListener("mousedown", () => {
+            this.elements.forEach(e => {
+                e.classList.remove("selected");
+            });
+            element.classList.add("selected");
+        });
     }
 
     addConnector(connector: Connector): void {
@@ -262,10 +286,11 @@ export class Diagram {
 
     private repaint() {
         if (this.connectors.length > 0) {
-            const checker = new FirstVisibleAncestor();
+            const visibility = new FirstVisibleAncestor();
+            const selected = new IsAncestorSelected(this.host);
             this.connectors.forEach(connector => {
                 // redraw a connector if one of its endpoint elements has changed position or size
-                connector.draw(this, checker);
+                connector.draw(this, visibility, selected);
             });
         }
         this.repainting = false;
@@ -279,14 +304,17 @@ export class Arrow extends Connector {
 
     constructor(source: HTMLElement, target: HTMLElement) {
         const path = createSVGElement("path") as SVGSVGElement;
-        path.setAttribute("stroke", "black");
+        path.setAttribute("stroke", "currentColor");
         path.setAttribute("fill", "transparent");
         super(path, source, target);
     }
 
-    draw(diagram: Diagram, checker: FirstVisibleAncestor): void {
-        let source: Element = checker.get(this.source);
-        let target: Element = checker.get(this.target);
+    draw(diagram: Diagram, visibility: FirstVisibleAncestor, selected: IsAncestorSelected): void {
+        let source: Element = visibility.get(this.source);
+        let target: Element = visibility.get(this.target);
+
+        this.path.classList.remove("source-selected");
+        this.path.classList.remove("target-selected");
 
         if (source == target) {
             this.path.removeAttribute("d");
@@ -346,6 +374,17 @@ export class Arrow extends Connector {
 
         const curve = `M${sourcePt.x} ${sourcePt.y} C${sourceCtlPt.x} ${sourceCtlPt.y} ${targetCtlPt.x} ${targetCtlPt.y} ${targetPt.x} ${targetPt.y}`;
         this.path.setAttribute("d", curve);
-        this.path.setAttribute("marker-end", `url(#${diagram.markerId})`);
+
+        let markerId;
+        if (selected.get(this.source)) {
+            this.path.classList.add("source-selected");
+            markerId = diagram.markers.get(MarkerState.SourceSelected);
+        } else if (selected.get(this.target)) {
+            this.path.classList.add("target-selected");
+            markerId = diagram.markers.get(MarkerState.TargetSelected);
+        } else {
+            markerId = diagram.markers.get(MarkerState.Regular);
+        }
+        this.path.setAttribute("marker-end", `url(#${markerId})`);
     }
 }

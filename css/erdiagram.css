@@ -59,6 +59,35 @@ body > .tab-panel {
     height: 100%;
 }
 
+.diagram > div .selected {
+    border: 2px solid red;
+}
+
+.diagram > svg > path {
+    stroke: black;
+    fill: transparent;
+}
+
+.diagram > svg > path.source-selected {
+    stroke: red;
+}
+
+.diagram > svg > path.target-selected {
+    stroke: green;
+}
+
+.diagram > svg > defs > marker.regular > polygon {
+    fill: black;
+}
+
+.diagram > svg > defs > marker.source-selected > polygon {
+    fill: red;
+}
+
+.diagram > svg > defs > marker.target-selected > polygon {
+    fill: green;
+}
+
 .diagram.elastic > div > * {
     margin: 0;
 }
