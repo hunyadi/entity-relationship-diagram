@@ -7,8 +7,5 @@
     },
     "modules": {
         "out": "src/erdiagram.ts"
-    },
-    "external": {
-        "mathjs": "math"
     }
 }

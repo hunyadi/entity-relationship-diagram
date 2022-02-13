@@ -50,7 +50,9 @@ class RealArray implements TypedArray<number> {
     }
 
     duplicate(): TypedArray<number> {
-        return new RealArray(this.data);
+        const data = new Float64Array(this.data.length);
+        data.set(this.data);
+        return new RealArray(data);
     }
 
     subarray(begin: IndexType, end: IndexType): TypedArray<number> {
@@ -98,6 +100,7 @@ interface Matrix<ValueType> {
     set(i: IndexType, j: IndexType, value: ValueType): void;
     duplicate(): Matrix<ValueType>;
     transpose(): Matrix<ValueType>;
+    diag(): TypedArray<ValueType>;
     add(op: Readonly<Matrix<ValueType>>): Matrix<ValueType>;
     subtract(op: Readonly<Matrix<ValueType>>): Matrix<ValueType>;
     plus(op: Readonly<Matrix<ValueType>>): Matrix<ValueType>;
@@ -126,6 +129,8 @@ abstract class GenericMatrix<ValueType> implements Matrix<ValueType> {
     abstract duplicate(): Matrix<ValueType>;
 
     abstract transpose(): Matrix<ValueType>;
+
+    abstract diag(): TypedArray<ValueType>;
 
     compareShape(op: Readonly<Matrix<ValueType>>): void {
         if (this.rows != op.rows || this.cols != op.cols) {
@@ -187,6 +192,10 @@ export class RealMatrix extends GenericMatrix<number> {
         return result;
     }
 
+    static copy(op: Matrix<number>): RealMatrix {
+        return new RealMatrix(op.data.duplicate(), op.rows, op.cols);
+    }
+
     static diag(d: number[]): RealMatrix {
         const rows = d.length;
         const m = RealMatrix.zeros(rows, rows);
@@ -222,6 +231,15 @@ export class RealMatrix extends GenericMatrix<number> {
         return result;
     }
 
+    diag(): RealArray {
+        const len = Math.min(this.rows, this.cols);
+        const arr = new RealArray(len);
+        for (let k = 0; k < len; ++k) {
+            arr.set(k, this.get(k, k));
+        }
+        return arr;
+    }
+
     mtimes(op: Readonly<Matrix<number>>): Matrix<number> {
         const result = RealMatrix.zeros(this.rows, op.cols);
         for (let i = 0; i < this.rows; ++i) {
@@ -235,4 +253,108 @@ export class RealMatrix extends GenericMatrix<number> {
         }
         return result;
     }
+}
+
+type MatrixEntry<ValueType> = {
+    row: IndexType;
+    col: IndexType;
+    value: ValueType;
+};
+
+/**
+ * Computes the eigenvalues of a matrix using the Jacobi method.
+ */
+export class Jacobi {
+    A: RealMatrix;
+    Q: RealMatrix;
+
+    constructor(M: Matrix<number>) {
+        this.A = RealMatrix.copy(M);
+        this.Q = RealMatrix.eye(M.rows, M.cols);
+    }
+
+    run(): Jacobi {
+        for (let iter = 0; iter < 1000; iter++) {
+            let maximum = this.computeMaximum();
+            if (2 * maximum.value < 1e-6) {
+                break;
+            }
+            const [c, s] = this.computeRotation(maximum.row, maximum.col);
+            this.updateMatrices(maximum.row, maximum.col, c, s);
+        }
+        return this;
+    }
+
+    get eigenvalues(): number[] {
+        return this.A.diag().toArray();
+    }
+
+    get eigenvectors(): TypedArray<number>[] {
+        return Array.from(
+            { length: this.Q.rows },
+            (_, k) => this.Q.row(k)
+        );
+    }
+
+    private computeMaximum(): MatrixEntry<number> {
+        let im = 0;
+        let jm = 0;
+        let am = -Number.MAX_VALUE;
+        const dim = this.A.rows;
+        for (let i = 0; i < dim - 1; i++) {
+            for (let j = i + 1; j < dim; j++) {
+                if (Math.abs(this.A.get(i, j)) > am) {
+                    im = i;
+                    jm = j;
+                    am = Math.abs(this.A.get(i, j));
+                }
+            }
+        }
+        return {
+            row: im, col: jm, value: am
+        };
+    }
+
+    private computeRotation(i: number, j: number): [number, number] {
+        let beta = (this.A.get(i, i) - this.A.get(j, j)) / 2 / this.A.get(i, j);
+        beta /= Math.sqrt(1 + beta * beta);
+        const c = Math.sqrt(0.5 + beta / 2);
+        const s = Math.sqrt(0.5 - beta / 2);
+        return [c, s];
+    }
+
+    private updateMatrices(i: number, j: number, c: number, s: number): void {
+        const dim = this.A.rows;
+        for (let k = 0; k < dim; k++) {
+            const xi = c * this.A.get(i, k) + s * this.A.get(j, k);
+            const xj = -s * this.A.get(i, k) + c * this.A.get(j, k);
+            this.A.set(i, k, xi);
+            this.A.set(j, k, xj);
+        }
+        for (let k = 0; k < dim; k++) {
+            const xi = c * this.A.get(k, i) + s * this.A.get(k, j);
+            const xj = -s * this.A.get(k, i) + c * this.A.get(k, j);
+            this.A.set(k, i, xi);
+            this.A.set(k, j, xj);
+        }
+        for (let k = 0; k < dim; k++) {
+            const xi = c * this.Q.get(i, k) + s * this.Q.get(j, k);
+            const xj = -s * this.Q.get(i, k) + c * this.Q.get(j, k);
+            this.Q.set(i, k, xi);
+            this.Q.set(j, k, xj);
+        }
+    }
+}
+
+/**
+ * Returns an array of indices that puts the items in an array in increasing order.
+ * @param arrayToSort The array A in which to compare elements.
+ * @returns An index array I such that A[I[k]] is ordered from smallest to largest.
+ */
+export function sortedIndexArray<T>(arrayToSort: readonly T[]): number[] {
+    return Array.from(Array(arrayToSort.length).keys()).sort((ixA, ixB) => {
+        const valA = arrayToSort[ixA]!;
+        const valB = arrayToSort[ixB]!;
+        return valA < valB ? -1 : (valB < valA ? 1 : 0);
+    });
 }

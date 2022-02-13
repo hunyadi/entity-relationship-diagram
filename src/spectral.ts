@@ -8,9 +8,8 @@
  **/
 
 
-import math = require("mathjs");
 import { Vector } from "./geometry";
-import { RealMatrix } from "./matrix";
+import { Jacobi, RealMatrix, sortedIndexArray } from "./matrix";
 
 type GraphEdge<T> = {
     source: T,
@@ -34,16 +33,20 @@ export class SpectralLayout<T> {
         const L = RealMatrix.diag(A.rowSum()).minus(A);
 
         // perform eigenvalue decomposition
-        const eigenresult = math.eigs(math.matrix(L.toArray()), 1e-15);
-        const values = (eigenresult.values as math.Matrix).toArray() as number[];
+        const jacobi = new Jacobi(L).run();
+        const eigenvalues = jacobi.eigenvalues;
 
-        // find eigenvectors belonging to second and third smallest nonzero eigenvalues,
+        // find eigenvectors belonging to first and second smallest nonzero eigenvalues,
         // which if used as coordinates provide a good distribution of graph nodes
-        const index = values.findIndex(value => value > 1e-15);
-        const U = eigenresult.vectors;
+        const order = sortedIndexArray(eigenvalues);
+        let index = 0;
+        while (eigenvalues[order[index]!]! < 1e-6) {
+            ++index;
+        }
+        const U = jacobi.eigenvectors;
         const positions = Vector.combine(
-            (math.squeeze(math.column(U, index)) as math.Matrix).toArray() as number[],
-            (math.squeeze(math.column(U, index + 1)) as math.Matrix).toArray() as number[]
+            U[order[index]!]!.toArray(),
+            U[order[index + 1]!]!.toArray()
         );
 
         const minimumDistance = 0.1;

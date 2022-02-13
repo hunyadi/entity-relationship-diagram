@@ -49,6 +49,6 @@ Spectral layout is based on the idea that coordinates obtained from eigenvectors
 
 The graph Laplacian is calculated as the difference of the degree matrix and the adjacency matrix. The layout algorithm computes the eigenvalues and corresponding eigenvectors of the Laplacian matrix, and takes the eigenvectors that belong to the smallest and second-smallest nonzero eigenvalues. Positions of nodes on the plane are set as the coordinates of these eigenvectors.
 
-Eigenvalues and eigenvectors are calculated with the [Math.js](https://mathjs.org/index.html) library.
+Eigenvalues and eigenvectors of the real symmetric graph Laplacian matrix are calculated with the [Jacobi eigenvalue algorithm](https://en.wikipedia.org/wiki/Jacobi_eigenvalue_algorithm). See [a live demonstration](http://www.math.u-szeged.hu/~nagyg/Oktatas/INF/DiagonalizationJacobi.html) of how the algorithm works.
 
 The layout algorithm can produce nodes that are too close to one another. As a post-processing step, co-located nodes are identified and their separation is increased. To make space for separating co-located nodes, nodes in the graph are pushed outwards in a radial direction.
