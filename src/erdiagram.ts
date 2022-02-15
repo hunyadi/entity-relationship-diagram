@@ -22,8 +22,13 @@ declare interface PropertyDictionary {
     readonly [key: string]: EntityPropertyFeatures;
 }
 
+declare interface EntityKeys {
+    readonly primary: string;
+}
+
 declare interface EntityFeatures {
     readonly properties: PropertyDictionary;
+    readonly keys?: EntityKeys;
 }
 
 declare interface EntityDictionary {
@@ -71,18 +76,28 @@ class EntityPropertyElement implements Renderable {
 class EntityElement implements Renderable {
     private elem: HTMLTableElement;
 
-    constructor(public name: string, properties: PropertyDictionary) {
+    constructor(public name: string, features: EntityFeatures) {
         this.elem = document.createElement("table");
         this.elem.classList.add("entity");
 
         // generate HTML DOM representation of entity
-        const rows: string[] = [];
-        for (const [name, prop] of Object.entries(properties)) {
+        const body = document.createElement("tbody");
+        for (const [name, prop] of Object.entries(features.properties)) {
             const propName = `<span class="entity-property-name">${name}</span>`;
             const propType = `<span class="entity-property-type">${prop.type}</span>`;
-            rows.push(`<tr><td data-property="${name}">${propName}: ${propType}</td></tr>`);
+
+            const td = document.createElement("td");
+            if (features.keys && name == features.keys.primary) {
+                td.classList.add("entity-key");
+            }
+            td.dataset["property"] = name;
+            td.innerHTML = `${propName}: ${propType}`;
+            const tr = document.createElement("tr");
+            tr.append(td);
+            body.append(tr);
         }
-        this.elem.innerHTML = `<thead><tr><th><span class="entity-name">${this.name}</span> <span class="toggle"></span></th></tr></thead><tbody>` + rows.join("") + "</tbody>";
+        this.elem.insertAdjacentHTML("beforeend", `<thead><tr><th><span class="entity-name">${this.name}</span> <span class="toggle"></span></th></tr></thead>`);
+        this.elem.append(body);
 
         this.toggler.addEventListener("click", (event) => {
             event.preventDefault();
@@ -134,7 +149,7 @@ class EntityDiagram {
         this.validate(data);
 
         for (const [name, descriptor] of Object.entries(data.entities)) {
-            const entity = new EntityElement(name, descriptor.properties);
+            const entity = new EntityElement(name, descriptor);
             this.entities.set(name, entity);
         }
 
@@ -231,7 +246,7 @@ class NavigableEntityDiagram extends EntityDiagram {
         this.selector = this.diagram.host.querySelector("select")!;
 
         this.entities.forEach(entity => {
-            entity.compact(false);
+            entity.compact(true);
             entity.heading.addEventListener("click", event => {
                 event.preventDefault();
                 this.show(entity);
@@ -260,11 +275,13 @@ class NavigableEntityDiagram extends EntityDiagram {
     private display(entity: EntityElement): void {
         this.diagram.clear();
 
+        entity.compact(false);
         const leftPanel = this.diagram.host.querySelector(".left")!;
         const centerPanel = this.diagram.host.querySelector(".center")!;
         const rightPanel = this.diagram.host.querySelector(".right")!;
 
         const visible = new Set<EntityElement>();
+        visible.add(entity);
 
         centerPanel.append(entity.element);
         this.diagram.addElement(entity.element);

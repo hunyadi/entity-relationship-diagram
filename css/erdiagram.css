@@ -57,6 +57,7 @@ body > .tab-panel {
     position: absolute;
     width: 100%;
     height: 100%;
+    overflow: visible;
 }
 
 .diagram > div > .selected {
@@ -67,6 +68,10 @@ body > .tab-panel {
 .diagram > svg > path {
     stroke: black;
     fill: transparent;
+}
+
+.diagram.canvaslike > svg > path {
+    stroke: whitesmoke;
 }
 
 .diagram.canvaslike > svg > path.source-selected {
@@ -140,6 +145,10 @@ table.entity span.entity-property-name {
     font-weight: bold;
 }
 
+table.entity .entity-key:before {
+    content: "★";
+}
+
 .diagram.navigable span.entity-name {
     cursor: pointer;
 }
@@ -148,19 +157,20 @@ table.entity span.entity-property-name {
     color: blue;
 }
 
+.diagram.navigable {
+    overflow-y: auto;
+}
+
 .navigator {
     display: flex;
     position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
+    width: 100%;
+    min-height: 100%;
     align-items: stretch;
-    justify-content: center;
 }
 
 .navigator > div {
-    flex: 3;
+    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;

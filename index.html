@@ -15,7 +15,10 @@
                         properties: {
                             "id": { type: "int" },
                             "name": { type: "string" },
-                        }
+                        },
+                        keys: {
+                            primary: "id",
+                        },
                     },
                     "Address": {
                         properties: {
@@ -24,7 +27,10 @@
                             "city_id": { type: "int" },
                             "street": { type: "string" },
                             "number": { type: "decimal" },
-                        }
+                        },
+                        keys: {
+                            primary: "id",
+                        },
                     },
                     "Person": {
                         properties: {
@@ -34,7 +40,10 @@
                             "perm_address_id": { type: "bigint" },
                             "temp_address_id": { type: "bigint" },
                             "manager_id": { type: "bigint" },
-                        }
+                        },
+                        keys: {
+                            primary: "id",
+                        },
                     },
                 },
                 relationships: [
@@ -63,12 +72,19 @@
 
             const entities = {};
             for (let i = 0; i < count; ++i) {
+                const count = 26 * (0.5 + 0.5 * Math.random());
+                let props = {};
+                for (let j = 0; j < count; ++j) {
+                    props[String.fromCharCode("a".charCodeAt(0) + j)] = {
+                        type: "type" + (j % 5 + 1)
+                    };
+                }
+                const k = Math.floor(count * Math.random());
                 entities["entity" + i] = {
-                    properties: {
-                        "a": { type: "T1" },
-                        "b": { type: "T2" },
-                        "c": { type: "T3" }
-                    }
+                    properties: props,
+                    keys: {
+                        primary: String.fromCharCode("a".charCodeAt(0) + k),
+                    },
                 };
             }
 
