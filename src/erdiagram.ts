@@ -9,9 +9,10 @@
 
 import { Arrow, Diagram } from "./diagram";
 import { ElasticLayout, ElasticLayoutOptions } from "./elastic";
-import { Movable } from "./movable";
-import { SpectralLayout } from "./spectral";
+import Movable from "./movable";
+import SpectralLayout from "./spectral";
 import TabPanel from "./tabpanel";
+import Zoomable from "./zoomable";
 
 
 declare interface EntityPropertyFeatures {
@@ -321,6 +322,7 @@ class SpectralEntityDiagram extends EntityDiagram {
         super(elem, data);
         elem.classList.add("canvaslike");
         elem.classList.add("spectral");
+        new Zoomable(elem, this.diagram.host);
 
         this.entities.forEach(entity => {
             entity.compact(true);

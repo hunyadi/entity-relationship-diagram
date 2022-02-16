@@ -16,7 +16,7 @@ type GraphEdge<T> = {
     target: T;
 };
 
-export class SpectralLayout<T> {
+export default class SpectralLayout<T> {
     constructor(private nodes: T[], private edges: GraphEdge<T>[]) { }
 
     calculate(): Vector[] {

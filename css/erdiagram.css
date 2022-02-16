@@ -70,6 +70,10 @@ body > .tab-panel {
     fill: transparent;
 }
 
+.diagram > svg > defs > marker > polygon {
+    fill: black;
+}
+
 .diagram.canvaslike > svg > path {
     stroke: whitesmoke;
 }
@@ -82,8 +86,8 @@ body > .tab-panel {
     stroke: green;
 }
 
-.diagram > svg > defs > marker > polygon {
-    fill: black;
+.diagram.canvaslike > svg > defs > marker > polygon {
+    fill: whitesmoke;
 }
 
 .diagram.canvaslike > svg > defs > marker.source-selected > polygon {

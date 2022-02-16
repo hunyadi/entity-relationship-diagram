@@ -8,7 +8,7 @@
  **/
 
 import { BooleanMatrix } from "./boolarray";
-import { getOffsetRect } from "./htmldom";
+import { getOffsetRect } from "./htmlpos";
 import { Point, Size, Vector } from "./geometry";
 
 function withDefaults<T>() {

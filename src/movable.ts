@@ -8,6 +8,7 @@
  **/
 
 import { Coordinate, Point } from "./geometry";
+import { isPercentageAligned } from "./htmlpos";
 
 /**
 * Permits an element to be moved with mouse drag.
@@ -15,13 +16,14 @@ import { Coordinate, Point } from "./geometry";
 * The left and top style attributes of the dragged element are set with !important to ensure it's not repositioned
 * while the action is taking place.
 */
-export class Movable {
+export default class Movable {
     private mousePos: Coordinate = new Point(0, 0);
     private elementPos: Coordinate = new Point(0, 0);
     private percentageParent: HTMLElement | null = null;
 
     private mouseMoveListener = (event: MouseEvent) => {
         event.preventDefault();
+        event.stopPropagation();
         const deltaX = event.clientX - this.mousePos.x;
         const deltaY = event.clientY - this.mousePos.y;
         const left = this.elementPos.x + deltaX;
@@ -45,8 +47,8 @@ export class Movable {
             document.addEventListener("mousemove", this.mouseMoveListener, true);
 
             this.elementPos = new Point(element.offsetLeft, element.offsetTop);
-            if (this.isPercentageAligned()) {
-                this.percentageParent = this.element.offsetParent as HTMLElement;
+            if (isPercentageAligned(element)) {
+                this.percentageParent = element.offsetParent as HTMLElement;
             } else {
                 this.percentageParent = null;
             }
@@ -71,15 +73,4 @@ export class Movable {
         style.removeProperty("right");
         style.removeProperty("bottom");
     }
-
-    private isPercentageAligned(): boolean {
-        const style = this.element.style;
-        const isHorz = isCSSPercentage(style.getPropertyValue("left")) || isCSSPercentage(style.getPropertyValue("right"));
-        const isVert = isCSSPercentage(style.getPropertyValue("top")) || isCSSPercentage(style.getPropertyValue("bottom"));
-        return isHorz && isVert;
-    }
-}
-
-function isCSSPercentage(value: string) {
-    return value.match("^-?[0-9][.0-9]*%$") !== null;
 }
