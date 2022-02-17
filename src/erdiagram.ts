@@ -9,7 +9,7 @@
 
 import { Arrow, Diagram } from "./diagram";
 import { ElasticLayout, ElasticLayoutOptions } from "./elastic";
-import Movable from "./movable";
+import { Movable, Pannable } from "./movable";
 import SpectralLayout from "./spectral";
 import TabPanel from "./tabpanel";
 import Zoomable from "./zoomable";
@@ -323,6 +323,7 @@ class SpectralEntityDiagram extends EntityDiagram {
         elem.classList.add("canvaslike");
         elem.classList.add("spectral");
         new Zoomable(elem, this.diagram.host);
+        new Pannable(elem, this.diagram.host);
 
         this.entities.forEach(entity => {
             entity.compact(true);

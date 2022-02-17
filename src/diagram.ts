@@ -109,6 +109,7 @@ export class Diagram {
             fragment.append(child);
         });
 
+        // set up layer in which connections are drawn
         this.svg = createSVGElement("svg") as SVGSVGElement;
         this.initializeConnectorLayer();
         container.append(this.svg);
@@ -313,10 +314,12 @@ export class Arrow extends Connector {
         let source: Element = visibility.get(this.source);
         let target: Element = visibility.get(this.target);
 
-        this.path.classList.remove("source-selected");
-        this.path.classList.remove("target-selected");
+        const sourceSelected = this.path.classList.contains("source-selected");
+        const targetSelected = this.path.classList.contains("target-selected");
 
         if (source == target) {
+            this.path.classList.remove("source-selected");
+            this.path.classList.remove("target-selected");
             this.path.removeAttribute("d");
             this.path.removeAttribute("marker-end");
             return;
@@ -378,10 +381,25 @@ export class Arrow extends Connector {
         let markerId = diagram.markers.get(MarkerState.Regular);
         if (selected.get(this.source)) {
             this.path.classList.add("source-selected");
+            this.path.classList.remove("target-selected");
             markerId = diagram.markers.get(MarkerState.SourceSelected);
+
+            // emulate CSS z-index; move SVG path to be the last child of its parent to stack over other SVG elements
+            if (!sourceSelected) {
+                this.path.parentNode!.appendChild(this.path);
+            }
         } else if (selected.get(this.target)) {
+            this.path.classList.remove("source-selected");
             this.path.classList.add("target-selected");
             markerId = diagram.markers.get(MarkerState.TargetSelected);
+
+            // emulate CSS z-index; move SVG path to be the last child of its parent to stack over other SVG elements
+            if (!targetSelected) {
+                this.path.parentNode!.appendChild(this.path);
+            }
+        } else {
+            this.path.classList.remove("source-selected");
+            this.path.classList.remove("target-selected");
         }
         this.path.setAttribute("marker-end", `url(#${markerId})`);
     }

@@ -8,7 +8,7 @@
  **/
 
 import { Vector } from "./geometry";
-import { isPercentageAligned } from "./htmlpos";
+import { setPosition } from "./htmlpos";
 
 /**
 * Permits an element to be zoomed with mouse wheel.
@@ -46,21 +46,7 @@ export default class Zoomable {
                 const elem = e as HTMLElement;
                 const pos = new Vector(elem.offsetLeft, elem.offsetTop);
                 pos.subtract(offset).multiply(magnify).add(offset);
-
-                let cssLeft, cssTop;
-                if (isPercentageAligned(elem)) {
-                    const offsetParent = elem.offsetParent as HTMLElement;
-                    const width = offsetParent.offsetWidth;
-                    const height = offsetParent.offsetHeight;
-                    cssLeft = (100 * pos.x / width) + "%";
-                    cssTop = (100 * pos.y / height) + "%";
-                } else {
-                    cssLeft = pos.x + "px";
-                    cssTop = pos.y + "px";
-                }
-
-                elem.style.left = cssLeft;
-                elem.style.top = cssTop;
+                setPosition(elem, pos, false);
             });
         });
     }

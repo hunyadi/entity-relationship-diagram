@@ -7,8 +7,8 @@
  * @see     https://hunyadi.info.hu/
  **/
 
-import { Coordinate, Point } from "./geometry";
-import { isPercentageAligned } from "./htmlpos";
+import { Vector } from "./geometry";
+import { setPosition } from "./htmlpos";
 
 /**
 * Permits an element to be moved with mouse drag.
@@ -16,61 +16,68 @@ import { isPercentageAligned } from "./htmlpos";
 * The left and top style attributes of the dragged element are set with !important to ensure it's not repositioned
 * while the action is taking place.
 */
-export default class Movable {
-    private mousePos: Coordinate = new Point(0, 0);
-    private elementPos: Coordinate = new Point(0, 0);
-    private percentageParent: HTMLElement | null = null;
+abstract class Positionable {
+    protected mousePos = new Vector(0, 0);
 
     private mouseMoveListener = (event: MouseEvent) => {
         event.preventDefault();
         event.stopPropagation();
-        const deltaX = event.clientX - this.mousePos.x;
-        const deltaY = event.clientY - this.mousePos.y;
-        const left = this.elementPos.x + deltaX;
-        const top = this.elementPos.y + deltaY;
-        this.move(left, top, true);
+        this.update(event, true);
     };
 
-    constructor(private element: HTMLElement) {
-        element.addEventListener("mousedown", event => {
-            this.mousePos = new Point(event.clientX, event.clientY);
+    constructor(protected captureElement: HTMLElement, protected relatedElement: HTMLElement) {
+        captureElement.addEventListener("mousedown", event => {
+            event.preventDefault();
+            event.stopPropagation();
+            this.mousePos = new Vector(event.clientX, event.clientY);
+            this.capture();
 
             document.addEventListener("mouseup", event => {
                 document.removeEventListener("mousemove", this.mouseMoveListener, true);
-
-                const deltaX = event.clientX - this.mousePos.x;
-                const deltaY = event.clientY - this.mousePos.y;
-                const left = this.elementPos.x + deltaX;
-                const top = this.elementPos.y + deltaY;
-                this.move(left, top, false);
-            }, { "capture": true, "once": true });
+                this.update(event, false);
+            }, { "once": true });
             document.addEventListener("mousemove", this.mouseMoveListener, true);
-
-            this.elementPos = new Point(element.offsetLeft, element.offsetTop);
-            if (isPercentageAligned(element)) {
-                this.percentageParent = element.offsetParent as HTMLElement;
-            } else {
-                this.percentageParent = null;
-            }
-        }, true);
+        });
     }
 
-    private move(left: number, top: number, important: boolean): void {
-        let cssLeft, cssTop;
-        if (this.percentageParent) {
-            const width = this.percentageParent.offsetWidth;
-            const height = this.percentageParent.offsetHeight;
-            cssLeft = (100 * left / width) + "%";
-            cssTop = (100 * top / height) + "%";
-        } else {
-            cssLeft = left + "px";
-            cssTop = top + "px";
-        }
-        const priority = important ? "important" : "";
-        const style = this.element.style;
-        style.setProperty("left", cssLeft, priority);
-        style.setProperty("top", cssTop, priority);
-        style.removeProperty("right");
-        style.removeProperty("bottom");
+    protected abstract capture(): void;
+    protected abstract update(event: MouseEvent, important: boolean): void;
+}
+
+export class Movable extends Positionable {
+    private elementPos = new Vector(0, 0);
+
+    constructor(element: HTMLElement) {
+        super(element, element);
+    }
+
+    protected capture(): void {
+        this.elementPos = new Vector(this.relatedElement.offsetLeft, this.relatedElement.offsetTop);
+    }
+
+    protected update(event: MouseEvent, important: boolean): void {
+        const delta = new Vector(event.clientX, event.clientY).minus(this.mousePos);
+        const pos = this.elementPos.plus(delta);
+        setPosition(this.relatedElement, pos, important);
+    }
+}
+
+export class Pannable extends Positionable {
+    private positions = new Map<HTMLElement, Vector>();
+
+    protected capture(): void {
+        Array.from(this.relatedElement.children).forEach(e => {
+            const elem = e as HTMLElement;
+            this.positions.set(elem, new Vector(elem.offsetLeft, elem.offsetTop));
+        });
+    }
+
+    protected update(event: MouseEvent, important: boolean) {
+        const delta = new Vector(event.clientX, event.clientY).minus(this.mousePos);
+        Array.from(this.relatedElement.children).forEach(e => {
+            const elem = e as HTMLElement;
+            const pos = this.positions.get(elem)!.plus(delta);
+            setPosition(elem, pos, important);
+        });
     }
 }
