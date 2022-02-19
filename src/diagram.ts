@@ -17,7 +17,7 @@ abstract class Shape {
      */
     constructor(protected elem: SVGElement) { }
 
-    public get element(): SVGElement {
+    get element(): SVGElement {
         return this.elem;
     }
 }
@@ -33,11 +33,11 @@ abstract class Connector extends Shape {
         super(elem);
     }
 
-    public get source(): HTMLElement {
+    get source(): HTMLElement {
         return this.sourceElement;
     }
 
-    public get target(): HTMLElement {
+    get target(): HTMLElement {
         return this.targetElement;
     }
 
@@ -105,9 +105,9 @@ export class Diagram {
     constructor(container: HTMLElement) {
         // grab current children of container element
         const fragment = document.createDocumentFragment();
-        Array.from(container.children).forEach(child => {
+        for (let child of container.children) {
             fragment.append(child);
-        });
+        }
 
         // set up layer in which connections are drawn
         this.svg = createSVGElement("svg") as SVGSVGElement;
@@ -265,8 +265,11 @@ export class Diagram {
         );
     }
 
+    /**
+     * Randomizes the position of diagram elements.
+     */
     shuffle(): void {
-        Array.from(this.host.children).forEach(child => {
+        for (let child of this.host.children) {
             const elem = child as HTMLElement;
             const outerWidth = this.host.offsetWidth;
             const outerHeight = this.host.offsetHeight;
@@ -275,9 +278,12 @@ export class Diagram {
 
             elem.style.left = (Math.random() * (outerWidth - childWidth)) + "px";
             elem.style.top = (Math.random() * (outerHeight - childHeight)) + "px";
-        });
+        }
     }
 
+    /**
+     * Causes connections to be redrawn in the next paint cycle.
+     */
     private redraw() {
         if (!this.repainting) {
             window.requestAnimationFrame(this.repaint.bind(this));
@@ -285,10 +291,13 @@ export class Diagram {
         }
     }
 
+    /**
+     * Causes connections to be redrawn as part of the current paint cycle.
+     */
     private repaint() {
         if (this.connectors.length > 0) {
             const visibility = new FirstVisibleAncestor();
-            const selected = new IsAncestorSelected(this.host);
+            const selected = new IsAncestorSelected("selected", this.host);
             this.connectors.forEach(connector => {
                 // redraw a connector if one of its endpoint elements has changed position or size
                 connector.draw(this, visibility, selected);
@@ -299,7 +308,7 @@ export class Diagram {
 }
 
 export class Arrow extends Connector {
-    public get path(): SVGPathElement {
+    get path(): SVGPathElement {
         return this.elem as SVGPathElement;
     }
 
@@ -314,12 +323,12 @@ export class Arrow extends Connector {
         let source: Element = visibility.get(this.source);
         let target: Element = visibility.get(this.target);
 
-        const sourceSelected = this.path.classList.contains("source-selected");
-        const targetSelected = this.path.classList.contains("target-selected");
+        const sourceSelected = this.path.classList.contains(MarkerState.SourceSelected);
+        const targetSelected = this.path.classList.contains(MarkerState.TargetSelected);
 
         if (source == target) {
-            this.path.classList.remove("source-selected");
-            this.path.classList.remove("target-selected");
+            this.path.classList.remove(MarkerState.SourceSelected);
+            this.path.classList.remove(MarkerState.TargetSelected);
             this.path.removeAttribute("d");
             this.path.removeAttribute("marker-end");
             return;
@@ -380,8 +389,8 @@ export class Arrow extends Connector {
 
         let markerId = diagram.markers.get(MarkerState.Regular);
         if (selected.get(this.source)) {
-            this.path.classList.add("source-selected");
-            this.path.classList.remove("target-selected");
+            this.path.classList.add(MarkerState.SourceSelected);
+            this.path.classList.remove(MarkerState.TargetSelected);
             markerId = diagram.markers.get(MarkerState.SourceSelected);
 
             // emulate CSS z-index; move SVG path to be the last child of its parent to stack over other SVG elements
@@ -389,8 +398,8 @@ export class Arrow extends Connector {
                 this.path.parentNode!.appendChild(this.path);
             }
         } else if (selected.get(this.target)) {
-            this.path.classList.remove("source-selected");
-            this.path.classList.add("target-selected");
+            this.path.classList.remove(MarkerState.SourceSelected);
+            this.path.classList.add(MarkerState.TargetSelected);
             markerId = diagram.markers.get(MarkerState.TargetSelected);
 
             // emulate CSS z-index; move SVG path to be the last child of its parent to stack over other SVG elements
@@ -398,8 +407,8 @@ export class Arrow extends Connector {
                 this.path.parentNode!.appendChild(this.path);
             }
         } else {
-            this.path.classList.remove("source-selected");
-            this.path.classList.remove("target-selected");
+            this.path.classList.remove(MarkerState.SourceSelected);
+            this.path.classList.remove(MarkerState.TargetSelected);
         }
         this.path.setAttribute("marker-end", `url(#${markerId})`);
     }

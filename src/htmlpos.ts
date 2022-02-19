@@ -20,6 +20,12 @@ export function getOffsetRect(element: HTMLElement, ref: Coordinate): Rect {
     return new Rect(rect.left - ref.x, rect.top - ref.y, rect.right - ref.x, rect.bottom - ref.y);
 }
 
+/**
+ * Sets the position of an element in pixels or percentages, depending on the context.
+ * @param element The HTML element whose position to set.
+ * @param pos The new position in coordinates relative to the offset parent.
+ * @param important Whether to apply the CSS rule !important to the CSS position properties.
+ */
 export function setPosition(element: HTMLElement, pos: Coordinate, important: boolean): void {
     let cssLeft, cssTop;
     if (isPercentageAligned(element)) {

@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-        "outDir": "dist",
+        "outDir": "js",
         "target": "ES2017",
         "module": "commonjs",
         "allowUnreachableCode": false,
@@ -8,6 +8,7 @@
         "experimentalDecorators": true,
         "lib": [
             "DOM",
+            "DOM.Iterable",
             "ES2017"
         ],
         "noImplicitOverride": true,

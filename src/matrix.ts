@@ -10,20 +10,42 @@
 type IndexType = number;
 type SizeType = number;
 
+/**
+ * A vector (dense array) of values.
+ */
 interface TypedArray<ValueType> {
     get size(): SizeType;
     get(index: IndexType): ValueType;
     set(index: IndexType, value: ValueType): void;
+
+    /** Creates a copy of this vector. */
     duplicate(): TypedArray<ValueType>;
+
+    /** Returns a view to part of this vector. No copy is made. */
     subarray(begin: IndexType, end: IndexType): TypedArray<ValueType>;
+
+    /** Returns the sum of all values in this vector. */
     sum(): ValueType;
+
+    /** Returns the product of all values in this vector. */
     prod(): ValueType;
+
+    /** Adds a vector to this vector. Mutates the original vector. */
     add(op: Readonly<TypedArray<ValueType>>): TypedArray<ValueType>;
+
+    /** Subtracts a vector from this vector. Mutates the original vector. */
     subtract(op: Readonly<TypedArray<ValueType>>): TypedArray<ValueType>;
+
+    /** Sets the data in this vector based on an array-like source. */
     copyFrom(a: ArrayLike<ValueType>): void;
+
+    /** Returns a JavaScript array with the same values as in the vector. */
     toArray(): ValueType[];
 }
 
+/**
+ * A vector or real numbers.
+ */
 class RealArray implements TypedArray<number> {
     private data: Float64Array;
     public size: SizeType;
@@ -67,7 +89,6 @@ class RealArray implements TypedArray<number> {
         return this.data.reduce((partialSum, element) => partialSum * element, 1);
     }
 
-    /** Adds a vector to this vector. Mutates the original vector. */
     add(op: Readonly<TypedArray<number>>): TypedArray<number> {
         for (let k = 0; k < this.size; ++k) {
             this.data[k] += op.get(k);
@@ -75,7 +96,6 @@ class RealArray implements TypedArray<number> {
         return this;
     }
 
-    /** Subtracts a vector from this vector. Mutates the original vector. */
     subtract(op: Readonly<TypedArray<number>>): TypedArray<number> {
         for (let k = 0; k < this.size; ++k) {
             this.data[k] -= op.get(k);
@@ -92,20 +112,44 @@ class RealArray implements TypedArray<number> {
     }
 }
 
+/**
+ * A (dense) matrix.
+ */
 interface Matrix<ValueType> {
     get data(): TypedArray<ValueType>;
     get rows(): SizeType;
     get cols(): SizeType;
+
+    /** Returns an entry of a matrix at the specified row and column index. */
     get(i: IndexType, j: IndexType): ValueType;
+
+    /** Assigns a value to an entry of a matrix at the specified row and column index. */
     set(i: IndexType, j: IndexType, value: ValueType): void;
+
+    /** Creates a copy of a matrix. */
     duplicate(): Matrix<ValueType>;
+
+    /** Returns the transpose of a matrix. */
     transpose(): Matrix<ValueType>;
+
+    /** Returns a vector of all diagonal entries of a matrix. */
     diag(): TypedArray<ValueType>;
+
+    /** Adds a matrix to this matrix. Mutates the original matrix. */
     add(op: Readonly<Matrix<ValueType>>): Matrix<ValueType>;
+
+    /** Subtracts a matrix from this matrix. Mutates the original matrix. */
     subtract(op: Readonly<Matrix<ValueType>>): Matrix<ValueType>;
+
+    /** Returns the sum of two matrices. */
     plus(op: Readonly<Matrix<ValueType>>): Matrix<ValueType>;
+
+    /** Returns the difference of two matrices. */
     minus(op: Readonly<Matrix<ValueType>>): Matrix<ValueType>;
+
+    /** Returns the product of two matrices. */
     mtimes(op: Readonly<Matrix<ValueType>>): Matrix<ValueType>;
+
     rowSum(): ValueType[];
     toArray(): ValueType[][];
 }
@@ -121,6 +165,7 @@ abstract class GenericMatrix<ValueType> implements Matrix<ValueType> {
         return this.data.set(i * this.cols + j, value);
     }
 
+    /** Returns a given row of the matrix. */
     row(k: IndexType): TypedArray<ValueType> {
         const start = k * this.rows;
         return this.data.subarray(start, start + this.rows);
@@ -132,37 +177,33 @@ abstract class GenericMatrix<ValueType> implements Matrix<ValueType> {
 
     abstract diag(): TypedArray<ValueType>;
 
-    compareShape(op: Readonly<Matrix<ValueType>>): void {
+    private compareShape(op: Readonly<Matrix<ValueType>>): void {
         if (this.rows != op.rows || this.cols != op.cols) {
             throw RangeError("incompatible matrix dimensions");
         }
     }
 
-    /** Adds a matrix to this matrix. Mutates the original matrix. */
     add(op: Readonly<Matrix<ValueType>>): Matrix<ValueType> {
         this.compareShape(op);
         this.data.add(op.data);
         return this;
     }
 
-    /** Subtracts a matrix from this matrix. Mutates the original matrix. */
     subtract(op: Readonly<Matrix<ValueType>>): Matrix<ValueType> {
         this.compareShape(op);
         this.data.subtract(op.data);
         return this;
     }
 
-    abstract mtimes(op: Readonly<Matrix<ValueType>>): Matrix<ValueType>;
-
-    /** Returns the sum of two matrices. */
     plus(op: Readonly<Matrix<ValueType>>): Matrix<ValueType> {
         return this.duplicate().add(op);
     }
 
-    /** Returns the difference of two matrices. */
     minus(op: Readonly<Matrix<ValueType>>): Matrix<ValueType> {
         return this.duplicate().subtract(op);
     }
+
+    abstract mtimes(op: Readonly<Matrix<ValueType>>): Matrix<ValueType>;
 
     rowSum(): ValueType[] {
         return Array.from(
@@ -179,6 +220,9 @@ abstract class GenericMatrix<ValueType> implements Matrix<ValueType> {
     }
 }
 
+/**
+ * A matrix of real numbers.
+ */
 export class RealMatrix extends GenericMatrix<number> {
     static zeros(rows: number, cols: number): RealMatrix {
         return new RealMatrix(new RealArray(rows * cols), rows, cols);
@@ -263,20 +307,31 @@ type MatrixEntry<ValueType> = {
 
 /**
  * Computes the eigenvalues of a matrix using the Jacobi method.
+ * @see http://www.math.u-szeged.hu/~nagyg/Oktatas/INF/DiagonalizationJacobi.html
  */
 export class Jacobi {
+    static readonly TOLERANCE = 1e-6;
+
     A: RealMatrix;
     Q: RealMatrix;
 
+    /**
+     * Creates a new Jacobi method runner for a matrix.
+     * @param M The matrix whose eigenvalues and eigenvectors to compute.
+     */
     constructor(M: Matrix<number>) {
         this.A = RealMatrix.copy(M);
         this.Q = RealMatrix.eye(M.rows, M.cols);
     }
 
+    /**
+     * Computes the eigenvalues of the associated matrix using the Jacobi method.
+     * @returns This object, for property accessor chaining.
+     */
     run(): Jacobi {
         for (let iter = 0; iter < 1000; iter++) {
             let maximum = this.computeMaximum();
-            if (2 * maximum.value < 1e-6) {
+            if (2 * maximum.value < Jacobi.TOLERANCE) {
                 break;
             }
             const [c, s] = this.computeRotation(maximum.row, maximum.col);
@@ -351,7 +406,7 @@ export class Jacobi {
  * @param arrayToSort The array A in which to compare elements.
  * @returns An index array I such that A[I[k]] is ordered from smallest to largest.
  */
-export function sortedIndexArray<T>(arrayToSort: readonly T[]): number[] {
+export function sortedIndexArray<T>(arrayToSort: readonly T[]): IndexType[] {
     return Array.from(Array(arrayToSort.length).keys()).sort((ixA, ixB) => {
         const valA = arrayToSort[ixA]!;
         const valB = arrayToSort[ixB]!;

@@ -42,12 +42,12 @@ export default class Zoomable {
             const rect = captureElement.getBoundingClientRect();
             const origin = new Vector(rect.left, rect.top);
             offset.subtract(origin);
-            Array.from(relatedElement.children).forEach(e => {
+            for (let e of relatedElement.children) {
                 const elem = e as HTMLElement;
                 const pos = new Vector(elem.offsetLeft, elem.offsetTop);
                 pos.subtract(offset).multiply(magnify).add(offset);
                 setPosition(elem, pos, false);
-            });
+            }
         });
     }
 }

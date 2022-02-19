@@ -11,7 +11,7 @@ import { Vector } from "./geometry";
 import { setPosition } from "./htmlpos";
 
 /**
-* Permits an element to be moved with mouse drag.
+* Allows an element to be moved with mouse drag.
 *
 * The left and top style attributes of the dragged element are set with !important to ensure it's not repositioned
 * while the action is taking place.
@@ -25,10 +25,17 @@ abstract class Positionable {
         this.update(event, true);
     };
 
-    constructor(protected captureElement: HTMLElement, protected relatedElement: HTMLElement) {
+    /**
+     * Marks an element to be draggable with the mouse.
+     * @param relatedElement The element whose position is updated.
+     */
+    constructor(captureElement: HTMLElement, protected relatedElement: HTMLElement) {
         captureElement.addEventListener("mousedown", event => {
-            event.preventDefault();
-            event.stopPropagation();
+            if (event.target != captureElement) {
+                // do not start drag action when event is triggered on a descendant element
+                return;
+            }
+
             this.mousePos = new Vector(event.clientX, event.clientY);
             this.capture();
 
@@ -44,12 +51,11 @@ abstract class Positionable {
     protected abstract update(event: MouseEvent, important: boolean): void;
 }
 
+/**
+* Allows a single element to be moved with mouse drag.
+ */
 export class Movable extends Positionable {
     private elementPos = new Vector(0, 0);
-
-    constructor(element: HTMLElement) {
-        super(element, element);
-    }
 
     protected capture(): void {
         this.elementPos = new Vector(this.relatedElement.offsetLeft, this.relatedElement.offsetTop);
@@ -62,22 +68,25 @@ export class Movable extends Positionable {
     }
 }
 
+/**
+* Allows a set of elements that share a parent to be moved with mouse drag.
+ */
 export class Pannable extends Positionable {
     private positions = new Map<HTMLElement, Vector>();
 
     protected capture(): void {
-        Array.from(this.relatedElement.children).forEach(e => {
+        for (let e of this.relatedElement.children) {
             const elem = e as HTMLElement;
             this.positions.set(elem, new Vector(elem.offsetLeft, elem.offsetTop));
-        });
+        }
     }
 
     protected update(event: MouseEvent, important: boolean) {
         const delta = new Vector(event.clientX, event.clientY).minus(this.mousePos);
-        Array.from(this.relatedElement.children).forEach(e => {
+        for (let e of this.relatedElement.children) {
             const elem = e as HTMLElement;
             const pos = this.positions.get(elem)!.plus(delta);
             setPosition(elem, pos, important);
-        });
+        }
     }
 }

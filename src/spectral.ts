@@ -16,6 +16,12 @@ type GraphEdge<T> = {
     target: T;
 };
 
+/**
+ * Produces a layout using the eigen-decomposition of the graph Laplacian matrix.
+ *
+ * Coordinates of the position vectors are taken from the eigenvectors belonging to the two smallest nonzero
+ * eigenvalues of the graph Laplacian matrix.
+ */
 export default class SpectralLayout<T> {
     constructor(private nodes: T[], private edges: GraphEdge<T>[]) { }
 

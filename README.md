@@ -9,7 +9,7 @@ An HTML5 entity relationship diagram with entities as HTML elements and relation
 2. Create a diagram, passing entities and relationships.
 5. Use force-based or spectral layout to arrange entities on the canvas.
 
-Refer to the [demo page](index.html) for a full example.
+Refer to the [demo page](https://hunyadi.github.io/entity-relationship-diagram/index.html) and the corresponding [source code](index.html) for a full example.
 
 ## Background
 

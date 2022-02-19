@@ -12,6 +12,9 @@ export declare interface BooleanMatrixOps {
     set(i: number, j: number, value: boolean): void;
 }
 
+/**
+ * A matrix of boolean values implemented over a bit array.
+ */
 export class BooleanMatrix implements BooleanMatrixOps {
     private array: Uint8Array;
     private stride: number;

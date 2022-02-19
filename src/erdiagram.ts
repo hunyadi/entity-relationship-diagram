@@ -207,7 +207,7 @@ class ElasticEntityDiagram extends EntityDiagram {
         this.entities.forEach(entity => {
             entity.compact(true);
             this.diagram.addElement(entity.element);
-            new Movable(entity.element);
+            new Movable(entity.heading, entity.element);
         });
         this.relationships.forEach(relationship => {
             this.diagram.addConnector(new Arrow(relationship.source.element, relationship.target.element));
@@ -322,13 +322,13 @@ class SpectralEntityDiagram extends EntityDiagram {
         super(elem, data);
         elem.classList.add("canvaslike");
         elem.classList.add("spectral");
-        new Zoomable(elem, this.diagram.host);
-        new Pannable(elem, this.diagram.host);
+        new Zoomable(this.diagram.host, this.diagram.host);
+        new Pannable(this.diagram.host, this.diagram.host);
 
         this.entities.forEach(entity => {
             entity.compact(true);
             this.diagram.addElement(entity.element);
-            new Movable(entity.element);
+            new Movable(entity.heading, entity.element);
         });
 
         this.relationships.forEach(relationship => {

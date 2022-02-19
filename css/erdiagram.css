@@ -1,12 +1,16 @@
 body {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
-}
-
-body > .tab-panel {
-    box-sizing: border-box;
     width: 100vw;
     height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-family: sans-serif;
+}
+
+.tab-panel {
+    flex: 1;
     display: flex;
     flex-direction: column;
 }
@@ -115,22 +119,25 @@ table.entity .hidden {
     display: none;
 }
 
+table.entity > thead {
+    cursor: default;
+}
+
 table.entity > thead > tr:first-child {
     background-color: beige;
 }
 
 table.entity > thead span.toggle {
-    width: 10px;
-    height: 7.71px;
-    margin: 3px;
-    float: right;
     background-repeat: no-repeat;
     background-size: contain;
-    background-image: url(arrow-up.svg);
 }
 
-table.entity > thead span.toggle.collapsed {
-    background-image: url(arrow-down.svg);
+table.entity > thead span.toggle:before {
+    content: "▲";
+}
+
+table.entity > thead span.toggle.collapsed:before {
+    content: "▼";
 }
 
 table.entity > tbody > tr:nth-child(odd) {

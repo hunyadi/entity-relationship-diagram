@@ -15,12 +15,12 @@ export default class TabPanel {
         this.view = panel.querySelector(".tab-view")!;
 
         this.selector = panel.querySelector(".tab-selector")!;
-        Array.from(this.selector.children).forEach(child => {
+        for (let child of this.selector.children) {
             child.addEventListener("click", event => {
                 const selected = event.target as HTMLElement;
                 this.activateByName(selected.dataset["tab"]);
             });
-        });
+        }
         this.activateByIndex(0);
     }
 
@@ -48,11 +48,11 @@ export default class TabPanel {
     }
 
     private deactivateTabs() {
-        Array.from(this.selector.children).forEach(child => {
+        for (let child of this.selector.children) {
             child.classList.remove("tab-active");
-        });
-        Array.from(this.view.children).forEach(child => {
+        }
+        for (let child of this.view.children) {
             child.classList.remove("tab-active");
-        });
+        }
     }
 }

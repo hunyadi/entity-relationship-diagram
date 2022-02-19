@@ -41,15 +41,23 @@ export class FirstVisibleAncestor extends Memoizer<HTMLElement, HTMLElement> {
     }
 }
 
+/**
+ * Determines if an element or any of its ancestors have the specified CSS class.
+ */
 export class IsAncestorSelected extends Memoizer<HTMLElement, boolean> {
-    constructor(diagram: HTMLElement) {
-        super((e: HTMLElement) => {
-            while (e != diagram && !e.classList.contains("selected")) {
-                e = e.parentElement as HTMLElement;
+    /**
+     * Creates a memoizer for the ancestor CSS class checker.
+     * @param className The CSS class name to look for.
+     * @param root A root element to restrict the search to.
+     */
+    constructor(className: string, root: Element) {
+        super((e: Element) => {
+            while (e != root && !e.classList.contains(className)) {
+                e = e.parentElement as Element;
             }
 
             // has no selected ancestor if reached diagram root element
-            return (e != diagram);
+            return (e != root);
         });
     }
 }
