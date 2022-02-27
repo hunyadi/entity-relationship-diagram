@@ -37,6 +37,7 @@ export class Vector implements Coordinate {
         return new Vector(p.x, p.y);
     }
 
+    /** A list of vectors constructed from corresponding x and y coordinate pairs. */
     static combine(x: number[], y: number[]): Vector[] {
         if (x.length != y.length) {
             throw RangeError("input array size mismatch");
@@ -50,6 +51,13 @@ export class Vector implements Coordinate {
         return vectors;
     }
 
+    /** The mean vector produced by averaging a list of vectors. */
+    static mean(vectors: Vector[]): Vector {
+        const sum = vectors.reduce((prev, cur) => prev.add(cur), new Vector(0, 0));
+        return sum.divide(vectors.length);
+    }
+
+    /** Shifts vectors and proportionally scales coordinates such that all vectors fit into a unit square. */
     static rescale(vectors: Vector[]): Vector[] {
         if (vectors.length > 0) {
             const vector = vectors[0]!;
@@ -120,6 +128,13 @@ export class Vector implements Coordinate {
     multiply(scalar: number): Vector {
         this.x *= scalar;
         this.y *= scalar;
+        return this;
+    }
+
+    /** Divides the magnitude of this vector by the given scalar. Mutates the original vector. */
+    divide(scalar: number): Vector {
+        this.x /= scalar;
+        this.y /= scalar;
         return this;
     }
 }

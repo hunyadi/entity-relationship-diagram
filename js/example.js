@@ -1,3 +1,11 @@
+/** Randomizes the order of elements in an array using the Durstenfeld version of the Fisher-Yates shuffle. */
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
 function getSimpleSetup() {
     return {
         entities: {
@@ -78,14 +86,25 @@ function getComplexSetup() {
         };
     }
 
+    function getRelationship(sourceName, targetName) {
+        return {
+            source: { entity: sourceName, property: "a" },
+            target: { entity: targetName, property: "b" },
+        };
+    }
+
     const relationships = [];
-    for (const sourceName of Object.keys(entities)) {
-        for (const targetName of Object.keys(entities)) {
+    const entityArray = Object.keys(entities);
+    shuffle(entityArray);
+    for (let i = 0; i < entityArray.length - 1; ++i) {
+        const sourceName = entityArray[i];
+
+        // ensure entity has at least one connection (to make the graph fully connected)
+        relationships.push(getRelationship(sourceName, entityArray[i + 1]));
+
+        for (let j = i + 2; j < entityArray.length; ++j) {
             if (Math.random() > 0.9) {
-                relationships.push({
-                    source: { entity: sourceName, property: "a" },
-                    target: { entity: targetName, property: "b" },
-                });
+                relationships.push(getRelationship(sourceName, entityArray[j]));
             }
         }
     }
@@ -111,7 +130,7 @@ function displaySpectralDiagram(setup) {
     diagram = erd.createSpectralDiagram(document.getElementById("spectral-diagram"), setup);
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("load", () => {
     const setup = getComplexSetup();
     displayElasticDiagram(setup);
     displayNavigableDiagram(setup);

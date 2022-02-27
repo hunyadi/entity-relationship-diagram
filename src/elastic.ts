@@ -81,9 +81,7 @@ export class ElasticLayout {
             iterations: 250,
         });
 
-        this.objects = elements.map(element => {
-            return new ElasticLayoutObject(element);
-        });
+        this.objects = elements.map(element => new ElasticLayoutObject(element));
 
         this.connectivity = new BooleanMatrix(elements.length, elements.length);
         for (let [i, source] of this.objects.entries()) {
@@ -150,6 +148,7 @@ export class ElasticLayout {
         for (let k = 0; k < this.options.iterations; ++k) {
             this.step(center, objects, 0.1);
         }
+        this.reset(center, objects);
         this.savePosition(objects);
         this.running = false;
 
@@ -164,6 +163,21 @@ export class ElasticLayout {
 
     stop(): void {
         this.running = false;
+    }
+
+    /**
+     * Resets object velocity and forces, and re-centers objects in the viewport.
+     * @param centerPos The central position of the viewport.
+     * @param objects List of objects that participate in elastic layout.
+     */
+    private reset(centerPos: Vector, objects: ElasticLayoutObject[]): void {
+        const mean = Vector.mean(objects.map(obj => obj.position));
+        const offset = centerPos.minus(mean);
+        objects.forEach(obj => {
+            obj.position.add(offset);
+            obj.velocity = new Vector(0, 0);
+            obj.force = new Vector(0, 0);
+        });
     }
 
     /**
