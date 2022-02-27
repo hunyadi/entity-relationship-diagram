@@ -17,6 +17,7 @@ import Zoomable from "./zoomable";
 
 declare interface EntityPropertyFeatures {
     readonly type: string;
+    readonly nullable: boolean;
 }
 
 declare interface PropertyDictionary {
@@ -84,20 +85,25 @@ class EntityElement implements Renderable {
         // generate HTML DOM representation of entity
         const body = document.createElement("tbody");
         for (const [name, prop] of Object.entries(features.properties)) {
-            const propName = `<span class="entity-property-name">${name}</span>`;
-            const propType = `<span class="entity-property-type">${prop.type}</span>`;
-
             const td = document.createElement("td");
             if (features.keys && name == features.keys.primary) {
                 td.classList.add("entity-key");
             }
             td.dataset["property"] = name;
-            td.innerHTML = `${propName}: ${propType}`;
+
+            const propName = `<span class="entity-property-name">${name}</span>`;
+            const propType = `<span class="entity-property-type">${prop.type}</span>`;
+            let html = `${propName}: ${propType}`;
+            if (prop.nullable) {
+                html += `<span class="entity-property-nullable"></span>`;
+            }
+            td.innerHTML = html;
+
             const tr = document.createElement("tr");
             tr.append(td);
             body.append(tr);
         }
-        this.elem.insertAdjacentHTML("beforeend", `<thead><tr><th><span class="entity-name">${this.name}</span> <span class="toggle"></span></th></tr></thead>`);
+        this.elem.insertAdjacentHTML("beforeend", `<thead><tr><th><span class="toggle"></span><span class="entity-name">${this.name}</span></th></tr></thead>`);
         this.elem.append(body);
 
         this.toggler.addEventListener("click", (event) => {
