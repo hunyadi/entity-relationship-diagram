@@ -15,8 +15,37 @@ import TabPanel from "./tabpanel";
 import Zoomable from "./zoomable";
 
 
+declare interface TypeList {
+    readonly item: EntityType;
+}
+
+declare interface TypeSet {
+    readonly element: EntityType;
+}
+
+declare interface TypeDict {
+    readonly key: EntityType;
+    readonly value: EntityType;
+}
+
+type EntityType = string | TypeList | TypeSet | TypeDict;
+
+function entityTypeToString(type: EntityType): string {
+    if (typeof type === "string") {
+        return type;
+    } else if ("item" in type) {
+        return `List of [${entityTypeToString(type.item)}]`;
+    } else if ("element" in type) {
+        return `Set of [${entityTypeToString(type.element)}]`;
+    } else if ("key" in type && "value" in type) {
+        return `Dict of [${entityTypeToString(type.key)}] to [${entityTypeToString(type.value)}]`;
+    } else {
+        return `${undefined}`;
+    }
+}
+
 declare interface EntityPropertyFeatures {
-    readonly type: string;
+    readonly type: EntityType;
     readonly nullable: boolean;
 }
 
@@ -92,7 +121,7 @@ class EntityElement implements Renderable {
             td.dataset["property"] = name;
 
             const propName = `<span class="entity-property-name">${name}</span>`;
-            const propType = `<span class="entity-property-type">${prop.type}</span>`;
+            const propType = `<span class="entity-property-type">${entityTypeToString(prop.type)}</span>`;
             let html = `${propName}: ${propType}`;
             if (prop.nullable) {
                 html += `<span class="entity-property-nullable"></span>`;

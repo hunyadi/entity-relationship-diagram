@@ -68,13 +68,33 @@ function getSimpleSetup() {
 function getComplexSetup() {
     const count = 20;
 
+    function getPropertyType(seed) {
+        const innerType = "type" + (seed % 5 + 1);
+        if (seed % 4 == 0) {
+            return innerType;
+        } else if (seed % 4 == 1) {
+            return {
+                "item": innerType,
+            }
+        } else if (seed % 4 == 2) {
+            return {
+                "element": innerType,
+            }
+        } else if (seed % 4 == 3) {
+            return {
+                "key": innerType,
+                "value": innerType,
+            }
+        }
+    }
+
     const entities = {};
     for (let i = 0; i < count; ++i) {
         const count = 26 * (0.5 + 0.5 * Math.random());
         let props = {};
         for (let j = 0; j < count; ++j) {
             props[String.fromCharCode("a".charCodeAt(0) + j)] = {
-                type: "type" + (j % 5 + 1)
+                type: getPropertyType(j)
             };
         }
         const k = Math.floor(count * Math.random());
