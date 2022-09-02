@@ -55,6 +55,10 @@ body {
 .diagram {
     position: relative;
     overflow: hidden;
+
+    /* SVG export requires font properties to be declared for entire diagram */
+    font-family: sans-serif;
+    font-size: small;
 }
 
 .diagram > div, .diagram > svg {
@@ -111,8 +115,6 @@ table.entity {
     box-sizing: border-box;
     border: thin solid black;
     border-collapse: collapse;
-    font-family: sans-serif;
-    font-size: small;
     overflow: hidden;
     white-space: nowrap;
     text-align: left;

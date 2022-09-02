@@ -13,6 +13,7 @@ import { Movable, Pannable } from "./movable";
 import SpectralLayout from "./spectral";
 import TabPanel from "./tabpanel";
 import Zoomable from "./zoomable";
+import { toSVG, downloadSVG } from "./htmlsvg";
 
 
 declare interface TypeList {

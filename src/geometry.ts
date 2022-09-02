@@ -153,6 +153,10 @@ export class Rect {
     get center(): Point {
         return new Point((this.left + this.right) / 2, (this.top + this.bottom) / 2);
     }
+
+    get position(): Point {
+        return new Point(this.left, this.top);
+    }
 }
 
 export class Size {
