@@ -17,14 +17,50 @@ function createSVGElement(type: string): SVGElement {
     return document.createElementNS("http://www.w3.org/2000/svg", type);
 }
 
+function getPseudoContent(element: HTMLElement, pseudo: string): string | undefined {
+    const style = window.getComputedStyle(element, pseudo);
+    const content = style.getPropertyValue("content");
+
+    // check if it's a string literal like `"string"`
+    const matches = /^"(.*)"$/.exec(content);
+    if (matches) {
+        return matches[1];
+    }
+
+    // usually corresponds to the special value `none`
+    return undefined;
+}
+
+function getCSSRuleString(properties: Record<string, string>): string {
+    const items: string[] = [];
+    for (let [key, value] of Object.entries(properties)) {
+        items.push(`${key}:${value};`);
+    }
+    return items.join("");
+}
+
+function getSVGStyleProperties(inline: CSSStyleDeclaration, reference?: CSSStyleDeclaration): Record<string, string> {
+    const items = {};
+    const properties = ["font-family", "font-size", "font-style", "font-variant", "font-weight"];
+    for (let property of properties) {
+        const value = inline.getPropertyValue(property);
+        if (!reference || value != reference.getPropertyValue(property)) {
+            items[property] = value;
+        }
+    }
+    return items;
+}
+
 class SVGBuilder {
     private container: HTMLElement;
     private viewport: Rect = new Rect(0, 0, 0, 0);
+    private viewstyle: CSSStyleDeclaration;
     private root: SVGSVGElement;
     private defs: SVGDefsElement;
 
     constructor(container: HTMLElement) {
         this.container = container;
+        this.viewstyle = window.getComputedStyle(this.container);
         this.root = createSVGElement("svg") as SVGSVGElement;
         this.defs = createSVGElement("defs") as SVGDefsElement;
     }
@@ -32,6 +68,7 @@ class SVGBuilder {
     build(): SVGSVGElement {
         const r = this.container.getBoundingClientRect();
         this.viewport = new Rect(r.left, r.top, r.right, r.bottom);
+        this.viewstyle = window.getComputedStyle(this.container);
 
         const svg = createSVGElement("svg") as SVGSVGElement;
         svg.setAttribute("viewBox", `0 0 ${this.viewport.width} ${this.viewport.height}`);
@@ -46,8 +83,7 @@ class SVGBuilder {
 
         // SVG export requires font properties to be declared for entire diagram
         const style = createSVGElement("style") as SVGStyleElement;
-        const s = window.getComputedStyle(this.container);
-        style.innerHTML = `text { font-family: ${s.fontFamily}; font-size: ${s.fontSize}; font-style: ${s.fontStyle}; font-variant: ${s.fontVariant}; font-weight: ${s.fontWeight}; }`;
+        style.innerHTML = `text {${getCSSRuleString(getSVGStyleProperties(this.viewstyle))}}`;
         svg.append(style);
 
         svg.append(...this.root.children);
@@ -137,18 +173,45 @@ class SVGBuilder {
         return group;
     }
 
-    private visitText(node: Node): SVGElement {
+    private createSVGText(text: string, position: Point, source: Element): SVGTextElement {
+        const svg = createSVGElement("text") as SVGTextElement;
+        svg.setAttribute("x", `${position.x}`);
+        svg.setAttribute("y", `${position.y}`);
+        svg.setAttribute("style", getCSSRuleString(getSVGStyleProperties(window.getComputedStyle(source), this.viewstyle)));
+        svg.innerHTML = text;
+        return svg;
+    }
+
+    private visitText(node: Node, parent: Element): SVGElement {
         const range = document.createRange();
         range.selectNode(node);
         const rect = this.getPositionSize(range);
 
         // specify text base-point as position, not top-right corner
-        const svg = createSVGElement("text") as SVGTextElement;
-        svg.setAttribute("x", `${rect.left}`);
-        svg.setAttribute("y", `${rect.bottom}`);
+        const text = this.createSVGText((node.nodeValue || "").trim(), new Point(rect.left, rect.bottom), parent);
 
-        svg.innerHTML = (node.nodeValue || "").trim();
-        return svg;
+        return text;
+    }
+
+    private visitElement(element: HTMLElement): SVGElement[] {
+        if (!element.offsetParent) {
+            return [];
+        }
+
+        const items: SVGElement[] = [];
+        const rect = this.getPositionSize(element);
+
+        const before = getPseudoContent(element, ":before");
+        if (before) {
+            items.push(this.createSVGText(before, new Point(rect.left, rect.bottom), element));
+        }
+        items.push(...this.visitChildren(element));
+        const after = getPseudoContent(element, ":after");
+        if (after) {
+            items.push(this.createSVGText(after, new Point(rect.left, rect.bottom), element));
+        }
+
+        return items;
     }
 
     private visitChildren(element: Element): SVGElement[] {
@@ -157,7 +220,7 @@ class SVGBuilder {
             if (child.nodeType == Node.ELEMENT_NODE) {
                 items.push(...this.visit(child as Element));
             } else if (child.nodeType == Node.TEXT_NODE && child.nodeValue) {
-                items.push(this.visitText(child));
+                items.push(this.visitText(child, element));
             }
         });
         return items;
@@ -170,12 +233,7 @@ class SVGBuilder {
             case "table":
                 return [this.visitTable(element as HTMLTableElement)];
             default:
-                const el = element as HTMLElement;
-                if (el.offsetParent) {
-                    return this.visitChildren(element);
-                } else {
-                    return [];
-                }
+                return this.visitElement(element as HTMLElement);
         }
     }
 }
