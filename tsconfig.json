@@ -20,8 +20,5 @@
         "preserveConstEnums": true,
         "strict": true,
         "suppressImplicitAnyIndexErrors": true
-    },
-    "files": [
-        "src/erdiagram.ts"
-    ]
+    }
 }

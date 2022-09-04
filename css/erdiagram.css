@@ -15,13 +15,13 @@ body {
     flex-direction: column;
 }
 
-.tab-panel > .tab-selector {
+.tab-panel>.tab-selector {
     margin-top: 3px;
     padding: 0 3px;
     border-bottom: black solid thin;
 }
 
-.tab-panel > .tab-selector > * {
+.tab-panel>.tab-selector>* {
     display: inline-block;
     border: black solid thin;
     border-bottom: none;
@@ -31,16 +31,16 @@ body {
     opacity: 0.25;
 }
 
-.tab-panel > .tab-selector > .tab-active {
+.tab-panel>.tab-selector>.tab-active {
     opacity: 1;
 }
 
-.tab-panel > .tab-view {
+.tab-panel>.tab-view {
     flex: 1;
     position: relative;
 }
 
-.tab-panel > .tab-view > * {
+.tab-panel>.tab-view>* {
     visibility: hidden;
     position: absolute !important;
     box-sizing: border-box;
@@ -48,7 +48,7 @@ body {
     height: 100%;
 }
 
-.tab-panel > .tab-view > .tab-active {
+.tab-panel>.tab-view>.tab-active {
     visibility: visible;
 }
 
@@ -61,52 +61,53 @@ body {
     font-size: small;
 }
 
-.diagram > div, .diagram > svg {
+.diagram>div,
+.diagram>svg {
     position: absolute;
     width: 100%;
     height: 100%;
     overflow: visible;
 }
 
-.diagram > div > .selected {
+.diagram>div>.selected {
     border: 2px solid red;
     z-index: 1;
 }
 
-.diagram > svg > path {
+.diagram>svg>path {
     stroke: black;
     fill: transparent;
 }
 
-.diagram > svg > defs > marker > polygon {
+.diagram>svg>defs>marker>polygon {
     fill: black;
 }
 
-.diagram.canvaslike > svg > path {
+.diagram.canvaslike>svg>path {
     stroke: lightgray;
 }
 
-.diagram.canvaslike > svg > path.source-selected {
+.diagram.canvaslike>svg>path.source-selected {
     stroke: red;
 }
 
-.diagram.canvaslike > svg > path.target-selected {
+.diagram.canvaslike>svg>path.target-selected {
     stroke: green;
 }
 
-.diagram.canvaslike > svg > defs > marker > polygon {
+.diagram.canvaslike>svg>defs>marker>polygon {
     fill: lightgray;
 }
 
-.diagram.canvaslike > svg > defs > marker.source-selected > polygon {
+.diagram.canvaslike>svg>defs>marker.source-selected>polygon {
     fill: red;
 }
 
-.diagram.canvaslike > svg > defs > marker.target-selected > polygon {
+.diagram.canvaslike>svg>defs>marker.target-selected>polygon {
     fill: green;
 }
 
-.diagram.elastic > div > * {
+.diagram.elastic>div>* {
     margin: 0;
 }
 
@@ -125,28 +126,28 @@ table.entity .hidden {
     display: none;
 }
 
-table.entity > thead {
+table.entity>thead {
     cursor: default;
 }
 
-table.entity > thead > tr:first-child {
+table.entity>thead>tr:first-child {
     background-color: beige;
 }
 
-table.entity > thead span.toggle:before {
+table.entity>thead span.toggle:before {
     content: "▲";
     padding: 0 2px;
 }
 
-table.entity > thead span.toggle.collapsed:before {
+table.entity>thead span.toggle.collapsed:before {
     content: "▼";
 }
 
-table.entity > tbody > tr:nth-child(odd) {
+table.entity>tbody>tr:nth-child(odd) {
     background-color: white;
 }
 
-table.entity > tbody > tr:nth-child(even) {
+table.entity>tbody>tr:nth-child(even) {
     background-color: lightgray;
 }
 
@@ -189,7 +190,7 @@ table.entity .entity-key:before {
     align-items: stretch;
 }
 
-.navigator > div {
+.navigator>div {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -197,7 +198,7 @@ table.entity .entity-key:before {
     justify-content: center;
 }
 
-.navigator > div > * {
+.navigator>div>* {
     position: unset;
     margin: 5px;
 }
