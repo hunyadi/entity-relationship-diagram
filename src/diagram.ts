@@ -47,7 +47,7 @@ abstract class Connector extends Shape {
     }
 
     /** Redraws the connector. */
-    abstract draw(diagram: Diagram, visibility: FirstVisibleAncestor, selected: IsAncestorSelected): void;
+    abstract draw(diagram: DiagramCanvas, visibility: FirstVisibleAncestor, selected: IsAncestorSelected): void;
 }
 
 /**
@@ -69,7 +69,10 @@ const enum MarkerState {
     TargetSelected = "target-selected",
 }
 
-export class Diagram {
+export class DiagramCanvas {
+    /** The container element that is to wrap the item host layer and the drawing layer. */
+    public element: HTMLDivElement;
+
     /** The host element that contains other elements between which connections can be made. */
     public host: HTMLDivElement;
 
@@ -102,10 +105,13 @@ export class Diagram {
      * Creates a diagram.
      * @param container The container element that is to wrap the item host layer and the drawing layer.
      */
-    constructor(container: HTMLElement) {
+    constructor(parent: HTMLElement) {
+        const container = document.createElement("div");
+        container.classList.add("diagram-canvas");
+
         // grab current children of container element
         const fragment = document.createDocumentFragment();
-        for (let child of container.children) {
+        for (let child of parent.children) {
             fragment.append(child);
         }
 
@@ -146,6 +152,7 @@ export class Diagram {
             this.connectors = this.connectors.filter(connector => !unattachedConnectors.has(connector));
         });
 
+        this.element = container;
         this.clear();
     }
 
@@ -319,7 +326,7 @@ export class Arrow extends Connector {
         super(path, source, target);
     }
 
-    draw(diagram: Diagram, visibility: FirstVisibleAncestor, selected: IsAncestorSelected): void {
+    draw(diagram: DiagramCanvas, visibility: FirstVisibleAncestor, selected: IsAncestorSelected): void {
         let source: Element = visibility.get(this.source);
         let target: Element = visibility.get(this.target);
 

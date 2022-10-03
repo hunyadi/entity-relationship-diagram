@@ -52,62 +52,84 @@ body {
     visibility: visible;
 }
 
+.toolbar-button {
+    margin: 2px;
+    padding: 2px 4px;
+}
+
+.toolbar-button>i {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+}
+
+.toolbar-button>i.save-as-svg {
+    background: url("image-solid.svg") center center no-repeat;
+}
+
 .diagram {
+    display: flex;
+    flex-direction: column;
+}
+
+.diagram-canvas {
     position: relative;
     overflow: hidden;
+    flex: 1;
 
     /* SVG export requires font properties to be declared for entire diagram */
     font-family: sans-serif;
     font-size: small;
 }
 
-.diagram>div,
-.diagram>svg {
+.diagram-canvas>div,
+.diagram-canvas>svg {
+    display: block;
     position: absolute;
     width: 100%;
     height: 100%;
     overflow: visible;
 }
 
-.diagram>div>.selected {
+.diagram-canvas>div>.selected {
     border: 2px solid red;
     z-index: 1;
 }
 
-.diagram>svg>path {
+.diagram-canvas>svg>path {
     stroke: black;
     fill: transparent;
 }
 
-.diagram>svg>defs>marker>polygon {
+.diagram-canvas>svg>defs>marker>polygon {
     fill: black;
 }
 
-.diagram.canvaslike>svg>path {
+.diagram-canvas.canvaslike>svg>path {
     stroke: lightgray;
 }
 
-.diagram.canvaslike>svg>path.source-selected {
+.diagram-canvas.canvaslike>svg>path.source-selected {
     stroke: red;
 }
 
-.diagram.canvaslike>svg>path.target-selected {
+.diagram-canvas.canvaslike>svg>path.target-selected {
     stroke: green;
 }
 
-.diagram.canvaslike>svg>defs>marker>polygon {
+.diagram-canvas.canvaslike>svg>defs>marker>polygon {
     fill: lightgray;
 }
 
-.diagram.canvaslike>svg>defs>marker.source-selected>polygon {
+.diagram-canvas.canvaslike>svg>defs>marker.source-selected>polygon {
     fill: red;
 }
 
-.diagram.canvaslike>svg>defs>marker.target-selected>polygon {
+.diagram-canvas.canvaslike>svg>defs>marker.target-selected>polygon {
     fill: green;
 }
 
-.diagram.elastic>div>* {
+.diagram-canvas.elastic>div>* {
     margin: 0;
 }
 
@@ -170,15 +192,15 @@ table.entity .entity-key:before {
     padding: 0 2px;
 }
 
-.diagram.navigable span.entity-name {
+.diagram-canvas.navigable span.entity-name {
     cursor: pointer;
 }
 
-.diagram.navigable span.entity-name:hover {
+.diagram-canvas.navigable span.entity-name:hover {
     color: blue;
 }
 
-.diagram.navigable {
+.diagram-canvas.navigable {
     overflow-y: auto;
 }
 

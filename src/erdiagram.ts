@@ -7,14 +7,15 @@
  * @see     https://hunyadi.info.hu/
  **/
 
-import { Arrow, Diagram } from "./diagram";
+import { Arrow, DiagramCanvas } from "./diagram";
 import { ElasticLayout, ElasticLayoutOptions } from "./elastic";
 import { Movable, Pannable } from "./movable";
 import SpectralLayout from "./spectral";
 import TabPanel from "./tabpanel";
 import Zoomable from "./zoomable";
 import { toSVG, downloadSVG } from "./htmlsvg";
-
+import { Toolbar } from "./toolbar";
+// import styles from "./erdiagram.module.css";
 
 declare interface TypeList {
     readonly item: EntityType;
@@ -110,6 +111,7 @@ class EntityElement implements Renderable {
 
     constructor(public name: string, features: EntityFeatures) {
         this.elem = document.createElement("table");
+        //this.elem.classList.add(styles.entity);
         this.elem.classList.add("entity");
 
         // generate HTML DOM representation of entity
@@ -178,7 +180,7 @@ class EntityRelationshipElement {
 }
 
 class EntityDiagram {
-    protected diagram: Diagram;
+    protected diagram: DiagramCanvas;
     protected entities = new Map<string, EntityElement>();
     protected relationships: EntityRelationshipElement[] = [];
 
@@ -198,8 +200,17 @@ class EntityDiagram {
             this.relationships.push(new EntityRelationshipElement(sourceProperty, targetProperty));
         });
 
-        this.diagram = new Diagram(elem);
+        this.diagram = new DiagramCanvas(elem);
+
+        const toolbar = new Toolbar();
+        toolbar.add("save-as-svg", "Save as SVG", () => {
+            const svg = toSVG(this.diagram.element);
+            downloadSVG(svg);
+        });
+
         elem.classList.add("diagram");
+        elem.append(toolbar.element);
+        elem.append(this.diagram.element);
     }
 
     validate(data: EntityRelationshipData) {
@@ -233,8 +244,9 @@ class EntityDiagram {
 class ElasticEntityDiagram extends EntityDiagram {
     constructor(elem: HTMLElement, data: EntityRelationshipData, options: ElasticLayoutOptions) {
         super(elem, data);
-        elem.classList.add("canvaslike");
-        elem.classList.add("elastic");
+        const classList = this.diagram.element.classList;
+        classList.add("canvaslike");
+        classList.add("elastic");
 
         this.layout(options);
     }
@@ -279,7 +291,7 @@ class NavigableEntityDiagram extends EntityDiagram {
 
     constructor(elem: HTMLElement, data: EntityRelationshipData) {
         super(elem, data);
-        elem.classList.add("navigable");
+        this.diagram.element.classList.add("navigable");
         this.selector = this.diagram.host.querySelector("select")!;
 
         this.entities.forEach(entity => {
@@ -356,8 +368,9 @@ class NavigableEntityDiagram extends EntityDiagram {
 class SpectralEntityDiagram extends EntityDiagram {
     constructor(elem: HTMLElement, data: EntityRelationshipData) {
         super(elem, data);
-        elem.classList.add("canvaslike");
-        elem.classList.add("spectral");
+        const classList = this.diagram.element.classList;
+        classList.add("canvaslike");
+        classList.add("spectral");
         new Zoomable(this.diagram.host, this.diagram.host);
         new Pannable(this.diagram.host, this.diagram.host);
 

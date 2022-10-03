@@ -17,20 +17,31 @@ function createSVGElement(type: string): SVGElement {
     return document.createElementNS("http://www.w3.org/2000/svg", type);
 }
 
-function getPseudoContent(element: HTMLElement, pseudo: string): string | undefined {
+/**
+ * Extracts the text content of a pseudo-element.
+ * @param element The element whose pseudo-element to visit.
+ * @param pseudo The pseudo-element whose text content to extract.
+ * @returns The text content of the pseudo-element, if any.
+ */
+function getPseudoContent(element: HTMLElement, pseudo: ":before" | ":after"): string | undefined {
     const style = window.getComputedStyle(element, pseudo);
     const content = style.getPropertyValue("content");
 
     // check if it's a string literal like `"string"`
     const matches = /^"(.*)"$/.exec(content);
     if (matches) {
-        return matches[1];
+        return matches[1]!.replace('\\"', '"').replace("\\'", "'").replace("\\\\", "\\");
     }
 
     // usually corresponds to the special value `none`
     return undefined;
 }
 
+/**
+ * Builds a block of CSS properties.
+ * @param properties CSS properties as key-value pairs.
+ * @returns A block of CSS code.
+ */
 function getCSSRuleString(properties: Record<string, string>): string {
     const items: string[] = [];
     for (let [key, value] of Object.entries(properties)) {
@@ -39,6 +50,13 @@ function getCSSRuleString(properties: Record<string, string>): string {
     return items.join("");
 }
 
+/**
+ * Returns a dictionary of CSS properties to apply to an object.
+ * Does not apply a property if its value equals the reference value.
+ * @param inline CSS properties as key-value pairs to apply.
+ * @param reference Reference values for CSS properties.
+ * @returns A dictionary of CSS properties.
+ */
 function getSVGStyleProperties(inline: CSSStyleDeclaration, reference?: CSSStyleDeclaration): Record<string, string> {
     const items = {};
     const properties = ["font-family", "font-size", "font-style", "font-variant", "font-weight"];
@@ -51,6 +69,9 @@ function getSVGStyleProperties(inline: CSSStyleDeclaration, reference?: CSSStyle
     return items;
 }
 
+/**
+ * Builds an SVG element that mimics an HTML element.
+ */
 class SVGBuilder {
     private container: HTMLElement;
     private viewport: Rect = new Rect(0, 0, 0, 0);
@@ -58,6 +79,10 @@ class SVGBuilder {
     private root: SVGSVGElement;
     private defs: SVGDefsElement;
 
+    /**
+     * Initializes the builder to copy a container element.
+     * @param container The HTML element whose appearance to mimic.
+     */
     constructor(container: HTMLElement) {
         this.container = container;
         this.viewstyle = window.getComputedStyle(this.container);
@@ -114,11 +139,13 @@ class SVGBuilder {
         Array.from(svg.children).forEach(child => {
             switch (child.tagName.toLowerCase()) {
                 case "defs":
+                    // copy "defs" tag content to SVG element being built
                     Array.from(child.children).forEach(child => {
                         this.defs.append(child.cloneNode(true));
                     });
                     break;
                 default:
+                    // copy other SVG elements as-is
                     group.append(child.cloneNode(true));
             }
         });
@@ -132,8 +159,9 @@ class SVGBuilder {
     private visitTable(table: HTMLTableElement): SVGElement {
         const rect = this.getPositionSize(table);
         const style = window.getComputedStyle(table);
-
         const group = createSVGElement("g") as SVGGElement;
+
+        // draw table border
         const svg = createSVGElement("rect") as SVGRectElement;
         svg.setAttribute("x", `${rect.left}`);
         svg.setAttribute("y", `${rect.top}`);
@@ -144,6 +172,7 @@ class SVGBuilder {
         svg.setAttribute("fill", style.backgroundColor);
         group.append(svg);
 
+        // draw table rows
         Array.from(table.rows).forEach(row => {
             group.append(this.visitTableRow(row));
         });
@@ -154,8 +183,9 @@ class SVGBuilder {
     private visitTableRow(row: HTMLTableRowElement): SVGElement {
         const rect = this.getPositionSize(row);
         const style = window.getComputedStyle(row);
-
         const group = createSVGElement("g") as SVGGElement;
+
+        // draw table row border
         const svg = createSVGElement("rect") as SVGRectElement;
         svg.setAttribute("x", `${rect.left}`);
         svg.setAttribute("y", `${rect.top}`);
@@ -166,6 +196,7 @@ class SVGBuilder {
         svg.setAttribute("fill", style.backgroundColor);
         group.append(svg);
 
+        // draw table cells
         Array.from(row.cells).forEach(cell => {
             group.append(...this.visit(cell));
         });
@@ -173,10 +204,12 @@ class SVGBuilder {
         return group;
     }
 
-    private createSVGText(text: string, position: Point, source: Element): SVGTextElement {
+    private createSVGText(text: string, rect: Rect, source: Element): SVGTextElement {
+        const position = new Point(rect.left, 0.5 * (rect.top + rect.bottom));
         const svg = createSVGElement("text") as SVGTextElement;
         svg.setAttribute("x", `${position.x}`);
         svg.setAttribute("y", `${position.y}`);
+        svg.setAttribute("dominant-baseline", "central");
         svg.setAttribute("style", getCSSRuleString(getSVGStyleProperties(window.getComputedStyle(source), this.viewstyle)));
         svg.innerHTML = text;
         return svg;
@@ -186,10 +219,7 @@ class SVGBuilder {
         const range = document.createRange();
         range.selectNode(node);
         const rect = this.getPositionSize(range);
-
-        // specify text base-point as position, not top-right corner
-        const text = this.createSVGText((node.nodeValue || "").trim(), new Point(rect.left, rect.bottom), parent);
-
+        const text = this.createSVGText((node.nodeValue || "").trim(), rect, parent);
         return text;
     }
 
@@ -203,12 +233,12 @@ class SVGBuilder {
 
         const before = getPseudoContent(element, ":before");
         if (before) {
-            items.push(this.createSVGText(before, new Point(rect.left, rect.bottom), element));
+            items.push(this.createSVGText(before, rect, element));
         }
         items.push(...this.visitChildren(element));
         const after = getPseudoContent(element, ":after");
         if (after) {
-            items.push(this.createSVGText(after, new Point(rect.left, rect.bottom), element));
+            items.push(this.createSVGText(after, rect, element));
         }
 
         return items;
