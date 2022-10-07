@@ -8,6 +8,7 @@
  **/
 
 import { Point, Rect } from "./geometry";
+import { makeIdentifier } from "./unique";
 
 interface ClientRectangleProvider {
     getBoundingClientRect(): DOMRect;
@@ -15,6 +16,22 @@ interface ClientRectangleProvider {
 
 function createSVGElement(type: string): SVGElement {
     return document.createElementNS("http://www.w3.org/2000/svg", type);
+}
+
+function createSizedSVGElement(type: string, rect: Rect): SVGElement {
+    const svg = createSVGElement(type) as SVGRectElement;
+    svg.setAttribute("x", `${rect.left}`);
+    svg.setAttribute("y", `${rect.top}`);
+    svg.setAttribute("width", `${rect.width}`);
+    svg.setAttribute("height", `${rect.height}`);
+    return svg;
+}
+
+function createPositionedSVGElement(type: string, position: Point): SVGElement {
+    const svg = createSVGElement(type) as SVGRectElement;
+    svg.setAttribute("x", `${position.x}`);
+    svg.setAttribute("y", `${position.y}`);
+    return svg;
 }
 
 /**
@@ -51,22 +68,62 @@ function getCSSRuleString(properties: Record<string, string>): string {
 }
 
 /**
- * Returns a dictionary of CSS properties to apply to an object.
- * Does not apply a property if its value equals the reference value.
- * @param inline CSS properties as key-value pairs to apply.
- * @param reference Reference values for CSS properties.
- * @returns A dictionary of CSS properties.
+ * Returns a dictionary of CSS properties applied to an element.
+ * @param inline CSS properties applied to an element.
+ * @returns A dictionary of CSS properties as key-value pairs.
  */
-function getSVGStyleProperties(inline: CSSStyleDeclaration, reference?: CSSStyleDeclaration): Record<string, string> {
+function getSVGStyleProperties(inline: CSSStyleDeclaration): Record<string, string> {
     const items = {};
     const properties = ["font-family", "font-size", "font-style", "font-variant", "font-weight"];
     for (let property of properties) {
         const value = inline.getPropertyValue(property);
-        if (!reference || value != reference.getPropertyValue(property)) {
+        if (value) {
             items[property] = value;
         }
     }
     return items;
+}
+
+class StyleCatalog {
+    private styleToClass: Map<string, string> = new Map();
+    private typeToStyle: Map<string, string> = new Map();
+
+    setDefault(type: string, styles: Record<string, string>): void {
+        const style = getCSSRuleString(styles);
+        this.typeToStyle.set(type, style);
+    }
+
+    assignByTypeValue(type: string, styles: Record<string, string>): string | undefined {
+        const style = getCSSRuleString(styles);
+        if (this.typeToStyle.get(type) == style) {
+            return undefined;
+        }
+        return this.assignByString(style);
+    }
+
+    assignByValue(styles: Record<string, string>): string {
+        return this.assignByString(getCSSRuleString(styles));
+    }
+
+    private assignByString(style: string): string {
+        let id = this.styleToClass.get(style);
+        if (!id) {
+            id = makeIdentifier();
+            this.styleToClass.set(style, id);
+        }
+        return id;
+    }
+
+    build(): string {
+        const items: string[] = [];
+        this.typeToStyle.forEach((value, type) => {
+            items.push(`${type}{${value}}`);
+        });
+        this.styleToClass.forEach((id, value) => {
+            items.push(`.${id}{${value}}`);
+        });
+        return items.join("\n");
+    }
 }
 
 /**
@@ -75,9 +132,9 @@ function getSVGStyleProperties(inline: CSSStyleDeclaration, reference?: CSSStyle
 class SVGBuilder {
     private container: HTMLElement;
     private viewport: Rect = new Rect(0, 0, 0, 0);
-    private viewstyle: CSSStyleDeclaration;
     private root: SVGSVGElement;
     private defs: SVGDefsElement;
+    private catalog: StyleCatalog = new StyleCatalog();
 
     /**
      * Initializes the builder to copy a container element.
@@ -85,15 +142,16 @@ class SVGBuilder {
      */
     constructor(container: HTMLElement) {
         this.container = container;
-        this.viewstyle = window.getComputedStyle(this.container);
         this.root = createSVGElement("svg") as SVGSVGElement;
         this.defs = createSVGElement("defs") as SVGDefsElement;
     }
 
     build(): SVGSVGElement {
+        const properties = getSVGStyleProperties(window.getComputedStyle(this.container));
+        this.catalog.setDefault("text", properties);
+
         const r = this.container.getBoundingClientRect();
         this.viewport = new Rect(r.left, r.top, r.right, r.bottom);
-        this.viewstyle = window.getComputedStyle(this.container);
 
         const svg = createSVGElement("svg") as SVGSVGElement;
         svg.setAttribute("viewBox", `0 0 ${this.viewport.width} ${this.viewport.height}`);
@@ -108,7 +166,7 @@ class SVGBuilder {
 
         // SVG export requires font properties to be declared for entire diagram
         const style = createSVGElement("style") as SVGStyleElement;
-        style.innerHTML = `text {${getCSSRuleString(getSVGStyleProperties(this.viewstyle))}}`;
+        style.innerHTML = `text{dominant-baseline:central}` + this.catalog.build();
         svg.append(style);
 
         svg.append(...this.root.children);
@@ -117,11 +175,6 @@ class SVGBuilder {
         this.defs = createSVGElement("defs") as SVGDefsElement;
 
         return svg;
-    }
-
-    private getPosition(element: ClientRectangleProvider): Point {
-        const rect = element.getBoundingClientRect();
-        return new Point(rect.left - this.viewport.left, rect.top - this.viewport.top);
     }
 
     private getPositionSize(element: ClientRectangleProvider): Rect {
@@ -135,7 +188,7 @@ class SVGBuilder {
     }
 
     private visitSVG(svg: SVGSVGElement): SVGElement {
-        const group = createSVGElement("svg") as SVGSVGElement;
+        const embedded = createSVGElement("svg") as SVGSVGElement;
         Array.from(svg.children).forEach(child => {
             switch (child.tagName.toLowerCase()) {
                 case "defs":
@@ -146,14 +199,16 @@ class SVGBuilder {
                     break;
                 default:
                     // copy other SVG elements as-is
-                    group.append(child.cloneNode(true));
+                    embedded.append(child.cloneNode(true));
             }
         });
 
-        const position = this.getPosition(svg);
-        group.setAttribute("x", `${position.x}`);
-        group.setAttribute("y", `${position.y}`);
-        return group;
+        const rect = this.getPositionSize(svg);
+        embedded.setAttribute("x", `${rect.left}`);
+        embedded.setAttribute("y", `${rect.top}`);
+        embedded.setAttribute("width", `${rect.width}`);
+        embedded.setAttribute("height", `${rect.height}`);
+        return embedded;
     }
 
     private visitTable(table: HTMLTableElement): SVGElement {
@@ -162,14 +217,12 @@ class SVGBuilder {
         const group = createSVGElement("g") as SVGGElement;
 
         // draw table border
-        const svg = createSVGElement("rect") as SVGRectElement;
-        svg.setAttribute("x", `${rect.left}`);
-        svg.setAttribute("y", `${rect.top}`);
-        svg.setAttribute("width", `${rect.width}`);
-        svg.setAttribute("height", `${rect.height}`);
-        svg.setAttribute("stroke", style.borderColor);
-        svg.setAttribute("stroke-width", style.borderWidth);
-        svg.setAttribute("fill", style.backgroundColor);
+        const svg = createSizedSVGElement("rect", rect);
+        svg.setAttribute("class", this.catalog.assignByValue({
+            "stroke": style.borderTopColor,
+            "stroke-width": style.borderTopWidth,
+            "fill": style.backgroundColor
+        }));
         group.append(svg);
 
         // draw table rows
@@ -186,14 +239,12 @@ class SVGBuilder {
         const group = createSVGElement("g") as SVGGElement;
 
         // draw table row border
-        const svg = createSVGElement("rect") as SVGRectElement;
-        svg.setAttribute("x", `${rect.left}`);
-        svg.setAttribute("y", `${rect.top}`);
-        svg.setAttribute("width", `${rect.width}`);
-        svg.setAttribute("height", `${rect.height}`);
-        svg.setAttribute("stroke", style.borderColor);
-        svg.setAttribute("stroke-width", style.borderWidth);
-        svg.setAttribute("fill", style.backgroundColor);
+        const svg = createSizedSVGElement("rect", rect);
+        svg.setAttribute("class", this.catalog.assignByValue({
+            "stroke": style.borderTopColor,
+            "stroke-width": style.borderTopWidth,
+            "fill": style.backgroundColor
+        }));
         group.append(svg);
 
         // draw table cells
@@ -206,11 +257,11 @@ class SVGBuilder {
 
     private createSVGText(text: string, rect: Rect, source: Element): SVGTextElement {
         const position = new Point(rect.left, 0.5 * (rect.top + rect.bottom));
-        const svg = createSVGElement("text") as SVGTextElement;
-        svg.setAttribute("x", `${position.x}`);
-        svg.setAttribute("y", `${position.y}`);
-        svg.setAttribute("dominant-baseline", "central");
-        svg.setAttribute("style", getCSSRuleString(getSVGStyleProperties(window.getComputedStyle(source), this.viewstyle)));
+        const svg = createPositionedSVGElement("text", position) as SVGTextElement;
+        const cls = this.catalog.assignByTypeValue("text", getSVGStyleProperties(window.getComputedStyle(source)));
+        if (cls) {
+            svg.setAttribute("class", cls);
+        }
         svg.innerHTML = text;
         return svg;
     }
@@ -287,4 +338,4 @@ export function downloadSVG(svg: SVGSVGElement): void {
 export function toSVG(element: HTMLElement): SVGSVGElement {
     const builder = new SVGBuilder(element);
     return builder.build();
-}
+};

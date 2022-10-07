@@ -9,6 +9,7 @@
 
 import { Point, Rect } from "./geometry";
 import { createSVGElement, FirstVisibleAncestor, IsAncestorSelected } from "./htmldom";
+import { makeIdentifier } from "./unique";
 
 abstract class Shape {
     /**
@@ -48,19 +49,6 @@ abstract class Connector extends Shape {
 
     /** Redraws the connector. */
     abstract draw(diagram: DiagramCanvas, visibility: FirstVisibleAncestor, selected: IsAncestorSelected): void;
-}
-
-/**
- * Produces a unique identifier.
- * @param len The number of random characters to generate.
- * @returns An alphanumeric sequence.
- */
-function getUniqueIdentifier(len = 8) {
-    const base = 36;
-    return Array.from(
-        { length: len },
-        () => Math.floor(base * Math.random()).toString(base)
-    ).join("");
 }
 
 const enum MarkerState {
@@ -157,9 +145,9 @@ export class DiagramCanvas {
     }
 
     private initializeConnectorLayer(): void {
-        this.markers.set(MarkerState.Regular, getUniqueIdentifier());
-        this.markers.set(MarkerState.SourceSelected, getUniqueIdentifier());
-        this.markers.set(MarkerState.TargetSelected, getUniqueIdentifier());
+        this.markers.set(MarkerState.Regular, makeIdentifier());
+        this.markers.set(MarkerState.SourceSelected, makeIdentifier());
+        this.markers.set(MarkerState.TargetSelected, makeIdentifier());
 
         const defs = createSVGElement("defs");
         const markerDefs: string[] = [];
