@@ -73,7 +73,7 @@ function getCSSRuleString(properties: Record<string, string>): string {
  * @returns A dictionary of CSS properties as key-value pairs.
  */
 function getSVGStyleProperties(inline: CSSStyleDeclaration): Record<string, string> {
-    const items = {};
+    const items: Record<string, string> = {};
     const properties = ["font-family", "font-size", "font-style", "font-variant", "font-weight"];
     for (let property of properties) {
         const value = inline.getPropertyValue(property);

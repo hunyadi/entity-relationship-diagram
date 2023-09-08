@@ -12,7 +12,7 @@ import { getOffsetRect } from "./htmlpos";
 import { Point, Size, Vector } from "./geometry";
 
 function withDefaults<T>() {
-    return function <TDefaults extends Partial<T>>(defs: TDefaults) {
+    return function <TDefaults extends Partial<T> & { [key: string]: any; }>(defs: TDefaults) {
         return function (p: Pick<T, Exclude<keyof T, keyof TDefaults>> & Partial<TDefaults>): T {
             let result: any = p;
             for (let k of Object.keys(defs)) {

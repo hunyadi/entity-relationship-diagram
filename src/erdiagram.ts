@@ -428,6 +428,10 @@ class EntityRelationshipFactoryImpl implements EntityRelationshipFactory {
     }
 }
 
+declare global {
+    interface Window { erd: any, TabPanel: any; }
+}
+
 // export symbols to caller domain (necessary in Closure Compiler context)
 window["erd"] = new EntityRelationshipFactoryImpl();
 window["TabPanel"] = TabPanel;

@@ -5,7 +5,6 @@
         "module": "commonjs",
         "allowUnreachableCode": false,
         "allowUnusedLabels": false,
-        "experimentalDecorators": true,
         "lib": [
             "DOM",
             "DOM.Iterable",
@@ -19,6 +18,5 @@
         "noUnusedParameters": true,
         "preserveConstEnums": true,
         "strict": true,
-        "suppressImplicitAnyIndexErrors": true
     }
 }
