@@ -1,0 +1,40 @@
+{
+  "dependencies": {
+    "npm": "^10.2.5"
+  },
+  "name": "entity-relationship-diagram",
+  "description": "An HTML5 entity relationship diagram with entities as HTML elements and relationships as SVG Beziér curves. Items are arranged on a drawing canvas with a force-based or a spectral layout.",
+  "version": "0.1.0",
+  "main": "./src/erdiagram.ts",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hunyadi/entity-relationship-diagram.git"
+  },
+  "keywords": [
+    "entity",
+    "relationship",
+    "diagram",
+    "layout",
+    "elastic",
+    "navigable",
+    "spectral"
+  ],
+  "author": {
+    "name": "Levente Hunyadi",
+    "url": "https://hunyadi.info.hu/"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/hunyadi/entity-relationship-diagram/issues"
+  },
+  "homepage": "https://github.com/hunyadi/entity-relationship-diagram#readme",
+  "devDependencies": {
+     "typescript": "^5.3",
+     "webpack": "^5.89",
+     "webpack-cli": "^5.1"
+  }
+}
