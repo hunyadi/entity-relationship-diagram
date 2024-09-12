@@ -91,14 +91,14 @@ class RealArray implements TypedArray<number> {
 
     add(op: Readonly<TypedArray<number>>): TypedArray<number> {
         for (let k = 0; k < this.size; ++k) {
-            this.data[k] += op.get(k);
+            this.data[k]! += op.get(k);
         }
         return this;
     }
 
     subtract(op: Readonly<TypedArray<number>>): TypedArray<number> {
         for (let k = 0; k < this.size; ++k) {
-            this.data[k] -= op.get(k);
+            this.data[k]! -= op.get(k);
         }
         return this;
     }

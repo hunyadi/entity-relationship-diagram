@@ -311,8 +311,11 @@ class NavigableEntityDiagram extends EntityDiagram {
                 this.display(selected);
             }
         });
-        if (this.entities.size > 0) {
-            this.display(this.entities.values().next().value);
+
+        // display first element
+        for (const elem of this.entities.values()) {
+            this.display(elem);
+            break;
         }
     }
 
