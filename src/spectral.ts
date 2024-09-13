@@ -55,6 +55,11 @@ export default class SpectralLayout<T> {
             U[order[index + 1]!]!.toArray()
         );
 
+        // address issues due to potential numerical instability, e.g. convert NaN to 0.0
+        for (let i = 0; i < this.nodes.length; ++i) {
+            positions[i]!.canonicalize();
+        }
+
         const minimumDistance = 0.1;
 
         // find co-located items

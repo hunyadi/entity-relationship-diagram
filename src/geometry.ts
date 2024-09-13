@@ -102,11 +102,26 @@ export class Vector implements Coordinate {
         return new Vector(this.x * scalar, this.y * scalar);
     }
 
+    /** Converts a degenerate vector to the zero vector. Mutates the original vector. */
+    canonicalize(): Vector {
+        const len = this.magnitude();
+        if (len !== len) {  // is not a number (NaN)
+            this.x = 0;
+            this.y = 0;
+        }
+        return this;
+    }
+
     /** Normalizes a vector to a unit length. Mutates the original vector. */
     normalize(): Vector {
         const len = this.magnitude();
-        this.x /= len;
-        this.y /= len;
+        if (!len) {  // zero or not a number (NaN)
+            this.x = 0;
+            this.y = 0;
+        } else {
+            this.x /= len;
+            this.y /= len;
+        }
         return this;
     }
 
