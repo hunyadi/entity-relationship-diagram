@@ -125,7 +125,7 @@ class EntityElement implements Renderable {
 
             const propName = `<span class="entity-property-name">${name}</span>`;
             const propType = `<span class="entity-property-type">${entityTypeToString(prop.type)}</span>`;
-            let html = `${propName}: ${propType}`;
+            let html = `${propName} ${propType}`;
             if (prop.nullable) {
                 html += `<span class="entity-property-nullable"></span>`;
             }

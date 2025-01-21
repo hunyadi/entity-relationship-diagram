@@ -4,26 +4,24 @@
 <head>
     <meta charset="utf-8" />
     <title>Entity Relationship Diagram demonstration</title>
+
+    <link rel="preload" href="https://du11hjcvx0uqb.cloudfront.net/dist/fonts/lato/extended/Lato-Regular-bd03a2cc27.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+    <link rel="preload" href="https://du11hjcvx0uqb.cloudfront.net/dist/fonts/lato/extended/Lato-Bold-cccb897485.woff2" as="font" type="font/woff2" crossorigin="anonymous">
     <link rel="stylesheet" type="text/css" href="css/erdiagram.css" />
+
     <script src="js/erdiagram.min.js" defer="defer"></script>
-    <script src="js/example.js" defer="defer"></script>
+    <script src="js/graph.js" defer="defer"></script>
+    <script src="js/setup.js" defer="defer"></script>
 </head>
 
 <body>
-    <div style="margin: 5px;">
-        Interactive demonstration for <a href="https://github.com/hunyadi/entity-relationship-diagram">Entity
-            Relationship Diagram</a> by <a href="https://hunyadi.info.hu">Levente Hunyadi</a>.
-    </div>
     <div id="tab-panel" class="tab-panel">
         <div class="tab-selector">
-            <span data-tab="elastic">Elastic</span>
             <span data-tab="navigable">Navigable</span>
             <span data-tab="spectral">Spectral</span>
         </div>
         <div class="tab-view">
-            <div id="elastic-diagram" class="tab-active" data-tab="elastic"></div>
-
-            <div id="navigable-diagram" data-tab="navigable">
+            <div id="navigable-diagram" class="tab-active" data-tab="navigable">
                 <div class="navigator">
                     <div class="left"></div>
                     <div class="center">

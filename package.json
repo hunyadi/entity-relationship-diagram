@@ -30,7 +30,10 @@
   "homepage": "https://github.com/hunyadi/entity-relationship-diagram#readme",
   "devDependencies": {
     "typescript": "^5.3",
-    "webpack": "^5.89",
-    "webpack-cli": "^5.1"
+    "webpack": "^5.97.1",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "ts-loader": "^9.5.2"
   }
 }
