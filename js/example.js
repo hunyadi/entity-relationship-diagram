@@ -151,7 +151,9 @@ function displaySpectralDiagram(setup) {
 }
 
 window.addEventListener("load", () => {
-    displayNavigableDiagram(EntityRelationshipGraph);
-    displaySpectralDiagram(EntityRelationshipGraph);
+    const setup = getComplexSetup();
+    displayNavigableDiagram(setup);
+    displayElasticDiagram(setup);
+    displaySpectralDiagram(setup);
     new TabPanel(document.getElementById("tab-panel"));
 });
