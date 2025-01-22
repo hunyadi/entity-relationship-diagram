@@ -3,27 +3,22 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>Instructure Entity Relationship Diagram</title>
-
-    <link rel="preload" href="https://du11hjcvx0uqb.cloudfront.net/dist/fonts/lato/extended/Lato-Regular-bd03a2cc27.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-    <link rel="preload" href="https://du11hjcvx0uqb.cloudfront.net/dist/fonts/lato/extended/Lato-Bold-cccb897485.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+    <title>Entity Relationship Diagram demonstration</title>
     <link rel="stylesheet" type="text/css" href="css/erdiagram.css" />
-
     <script src="js/erdiagram.min.js" defer="defer"></script>
-    <script src="js/graph.js" defer="defer"></script>
-    <script src="js/setup.js" defer="defer"></script>
+    <script src="js/example.js" defer="defer"></script>
 </head>
 
 <body>
     <div id="tab-panel" class="tab-panel">
         <header class="header">
             <div class="logo">
-                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1.9245 23.913L16.0026 15.9853L30.08 23.913L16.0026 31.8374L1.9245 23.913Z" fill="#2A7BA0"/><path d="M8.96194 4.09729L1.9245 8.05761L8.96514 12.0218L16.0026 8.05761L8.96194 4.09729Z" fill="#FDCC10"/><path d="M15.9994 0.133118L8.96515 4.09408L16.0026 8.0576L23.0394 4.09728L15.9994 0.133118Z" fill="#F78F20"/><path d="M23.0394 4.09729L16.0026 8.05761L23.0394 12.0218L30.0768 8.05761L23.0394 4.09729Z" fill="#EB2227"/></svg>
-                <h1>Instructure Entity Relationship Diagram</h1>
+                <h1>Entity Relationship Diagram</h1>
             </div>
             <div class="tabs tab-selector">
-                <span data-tab="navigable" class="tab tab-active">Browse by table</span>
-                <span data-tab="spectral" class="tab">Show all tables</span>
+                <span data-tab="navigable" class="tab tab-active">Navigable</span>
+                <span data-tab="elastic" class="tab">Elastic</span>
+                <span data-tab="spectral" class="tab">Spectral</span>
             </div>
             <div class="actions">
                 <button class="btn-primary" id="btn-download">Download as SVG</button>
@@ -39,6 +34,7 @@
                     <div class="right"></div>
                 </div>
             </div>
+            <div id="elastic-diagram" class="diagram" data-tab="elastic"></div>
             <div id="spectral-diagram" class="diagram" data-tab="spectral"></div>
         </div>
     </div>
