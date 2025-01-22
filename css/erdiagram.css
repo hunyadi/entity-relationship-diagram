@@ -125,10 +125,6 @@ body {
     height: 24px;
 }
 
-.toolbar-button>i.save-as-svg {
-    content: "Download as SVG";
-}
-
 .diagram {
     display: flex;
     flex-direction: column;
