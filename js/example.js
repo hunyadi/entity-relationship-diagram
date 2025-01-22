@@ -152,8 +152,8 @@ function displaySpectralDiagram(setup) {
 
 window.addEventListener("load", () => {
     const setup = getComplexSetup();
-    displayElasticDiagram(setup);
     displayNavigableDiagram(setup);
+    displayElasticDiagram(setup);
     displaySpectralDiagram(setup);
     new TabPanel(document.getElementById("tab-panel"));
 });

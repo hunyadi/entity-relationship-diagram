@@ -10,20 +10,22 @@
 </head>
 
 <body>
-    <div style="margin: 5px;">
-        Interactive demonstration for <a href="https://github.com/hunyadi/entity-relationship-diagram">Entity
-            Relationship Diagram</a> by <a href="https://hunyadi.info.hu">Levente Hunyadi</a>.
-    </div>
     <div id="tab-panel" class="tab-panel">
-        <div class="tab-selector">
-            <span data-tab="elastic">Elastic</span>
-            <span data-tab="navigable">Navigable</span>
-            <span data-tab="spectral">Spectral</span>
-        </div>
+        <header class="header">
+            <div class="logo">
+                <h1>Entity Relationship Diagram</h1>
+            </div>
+            <div class="tabs tab-selector">
+                <span data-tab="navigable" class="tab tab-active">Navigable</span>
+                <span data-tab="elastic" class="tab">Elastic</span>
+                <span data-tab="spectral" class="tab">Spectral</span>
+            </div>
+            <div class="actions">
+                <button class="btn-primary" id="btn-download">Download as SVG</button>
+            </div>
+        </header>
         <div class="tab-view">
-            <div id="elastic-diagram" class="tab-active" data-tab="elastic"></div>
-
-            <div id="navigable-diagram" data-tab="navigable">
+            <div id="navigable-diagram" class="diagram" data-tab="navigable">
                 <div class="navigator">
                     <div class="left"></div>
                     <div class="center">
@@ -32,8 +34,8 @@
                     <div class="right"></div>
                 </div>
             </div>
-
-            <div id="spectral-diagram" data-tab="spectral"></div>
+            <div id="elastic-diagram" class="diagram" data-tab="elastic"></div>
+            <div id="spectral-diagram" class="diagram" data-tab="spectral"></div>
         </div>
     </div>
 </body>

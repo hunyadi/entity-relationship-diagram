@@ -14,7 +14,7 @@ import SpectralLayout from "./spectral";
 import TabPanel from "./tabpanel";
 import Zoomable from "./zoomable";
 import { toSVG, downloadSVG } from "./htmlsvg";
-import { Toolbar } from "./toolbar";
+//import { Toolbar } from "./toolbar";
 // import styles from "./erdiagram.module.css";
 
 declare interface TypeList {
@@ -125,9 +125,11 @@ class EntityElement implements Renderable {
 
             const propName = `<span class="entity-property-name">${name}</span>`;
             const propType = `<span class="entity-property-type">${entityTypeToString(prop.type)}</span>`;
-            let html = `${propName}: ${propType}`;
+            let html = `${propName} ${propType}`;
             if (prop.nullable) {
                 html += `<span class="entity-property-nullable"></span>`;
+            } else {
+                html += `<span class="entity-property-nullable nullable"></span>`;
             }
             td.innerHTML = html;
 
@@ -202,14 +204,21 @@ class EntityDiagram {
 
         this.diagram = new DiagramCanvas(elem);
 
-        const toolbar = new Toolbar();
+        /*const toolbar = new Toolbar();
         toolbar.add("save-as-svg", "Save as SVG", () => {
             const svg = toSVG(this.diagram.element);
             downloadSVG(svg);
         });
 
         elem.classList.add("diagram");
-        elem.append(toolbar.element);
+        elem.append(toolbar.element);*/
+
+        const btnDownload = document.getElementById("btn-download")!;
+        btnDownload.addEventListener("click", () => {
+            const svg = toSVG(this.diagram.element);
+            downloadSVG(svg);
+        });
+
         elem.append(this.diagram.element);
     }
 
