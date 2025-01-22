@@ -23,7 +23,72 @@ body {
     display: flex;
     flex-direction: column;
     font-family: var(--font-family);
+    color: #273540;
 }
+
+.header {
+    display: flex;
+    flex: 0 1;
+    flex-direction: row;
+    height: 36px;
+    padding: 12px 24px;
+    border-bottom: solid 1px #D7DADE;
+}
+
+.logo {
+    display: flex;
+    flex: 1;
+    gap: 8px;
+    align-items: center
+}
+
+.logo h1 {
+    margin: 0;
+    max-width: 160px;
+    font-size: 14px;
+}
+
+.tabs {
+    display: flex;
+    flex-grow:1;
+    align-self: center;
+    gap: 8px;
+}
+
+.tab {
+    border-bottom: none;
+    padding: 8px;
+    color: #273540;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.tab-active {
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 6px;
+    text-decoration-color: #0E68B3;
+    
+}
+
+.btn-primary {
+    display: inline-flex;
+    min-width: 60px;
+    padding: 4px 6px;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    border-radius: 4px;
+    border: 1px solid #0E68B3;
+    background: #2B7ABC;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 20px;
+    color: #fff;
+}
+
 
 .tab-panel {
     flex: 1;
@@ -31,30 +96,10 @@ body {
     flex-direction: column;
 }
 
-.tab-panel>.tab-selector {
-    margin-top: 3px;
-    padding: 0 3px;
-    border-bottom: black solid thin;
-}
-
-.tab-panel>.tab-selector>* {
-    display: inline-block;
-    border: black solid thin;
-    border-bottom: none;
-    border-radius: 8px 8px 0 0;
-    padding: 2px;
-    cursor: pointer;
-    opacity: 0.25;
-}
-
-.tab-panel>.tab-selector>.tab-active {
-    opacity: 1;
-}
-
-.tab-panel>.tab-view {
+.tab-view {
     flex: 1;
     position: relative;
-    background: #F6F6F6;
+    background: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='6' cy='6' r='1' fill='%23DFDFDF'/%3E%3C/svg%3E%0A") #F2F2F2;
 }
 
 .tab-panel>.tab-view>* {
@@ -81,7 +126,7 @@ body {
 }
 
 .toolbar-button>i.save-as-svg {
-    background: url("image-solid.svg") center center no-repeat;
+    content: "Download as SVG";
 }
 
 .diagram {
@@ -109,7 +154,7 @@ body {
 }
 
 .diagram-canvas>div>.selected {
-    border: 2px solid red;
+    border: 2px solid #2B7ABC;
     z-index: 1;
 }
 
@@ -123,27 +168,27 @@ body {
 }
 
 .diagram-canvas.canvaslike>svg>path {
-    stroke: lightgray;
+    stroke: #B7B7B7;
 }
 
 .diagram-canvas.canvaslike>svg>path.source-selected {
-    stroke: red;
+    stroke: #EE6D15;
 }
 
 .diagram-canvas.canvaslike>svg>path.target-selected {
-    stroke: green;
+    stroke: #EE6D15;
 }
 
 .diagram-canvas.canvaslike>svg>defs>marker>polygon {
-    fill: lightgray;
+    fill: #B7B7B7;
 }
 
 .diagram-canvas.canvaslike>svg>defs>marker.source-selected>polygon {
-    fill: red;
+    fill: #EE6D15;
 }
 
 .diagram-canvas.canvaslike>svg>defs>marker.target-selected>polygon {
-    fill: green;
+    fill:  #EE6D15;
 }
 
 .diagram-canvas.elastic>div>* {
@@ -153,27 +198,27 @@ body {
 table.entity {
     position: absolute;
     box-sizing: border-box;
+    background: #fff;
     border: 1px solid #D7DADE;
     border-collapse: collapse;
     overflow: hidden;
     white-space: nowrap;
     text-align: left;
     text-overflow: ellipsis;
+    box-shadow: 0px 1px 4px 0px rgba(0, 0, 0, 0.12);
+    border-radius: 2px;
 }
 
 table.entity .hidden {
     display: none;
 }
 
-table.entity>thead {
+table.entity thead {
+    background: #F2F4F4;
     cursor: default;
 }
 
-table.entity>thead>tr:first-child {
-    background-color: #F2F4F4;
-}
-
-table.entity>thead>tr:first-child th{
+table.entity thead tr:first-child th{
     display: flex;
     padding: 8px;
     justify-content: center;
@@ -181,39 +226,43 @@ table.entity>thead>tr:first-child th{
     align-self: stretch;
 }
 
-
-table.entity>thead span.toggle:before {
+table.entity thead span.toggle:before {
     display: inline-block;
     height: 14px;
     content: url("data:image/svg+xml,%3Csvg width='14' height='14' viewBox='0 0 14 14' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M11.6379 10.1111L7.00001 5.47325L2.36215 10.1111L1.55557 9.30453L7.00001 3.86008L12.4445 9.30453L11.6379 10.1111Z' fill='%23273540'/%3E%3C/svg%3E%0A");
     padding: 0 2px;
 }
 
-table.entity>thead span.toggle.collapsed:before {
+table.entity thead span.toggle.collapsed:before {
     content: url("data:image/svg+xml,%3Csvg width='14' height='14' viewBox='0 0 14 14' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M2.36214 3.88889L7 8.52675L11.6379 3.88889L12.4444 4.69547L7 10.1399L1.55556 4.69547L2.36214 3.88889Z' fill='%23273540'/%3E%3C/svg%3E");
 }
 
-/*table.entity>tbody>tr:nth-child(odd) {
-    background-color: white;
+table.entity.selected thead {
+    background-color: #EEF6FE;
+    color: #0E68B3;
 }
 
-table.entity>tbody>tr:nth-child(even) {
-    background-color: lightgray;
-}*/
-
 table.entity td {
-    /*border: thin solid black;*/
     display: flex;
     padding: 4px 8px;
     align-items: flex-end;
     gap: 4px;
     align-self: stretch;
-    /*background: url(<path-to-image>) lightgray 0% 0% / 50px 50px repeat, #FAFAFA;*/
     background: #FAFAFA;
 }
 
+table.entity td:before {
+    content: " ";
+    display: inline-block;
+    width: 12px;
+    height: 16px;
+    padding: 0 2px;
+}
+
+
 table.entity span.entity-property-name {
     flex: 1 0 0;
+    padding-right: 8px;
     font-weight: bold;
 }
 
@@ -228,19 +277,24 @@ table.entity span.entity-property-type {
 }
 
 table.entity span.entity-property-nullable:before {
-    content: "N";
-    font-weight: bold;
+    display: inline-block;
+    content: " ";
+    width: 8px;
     padding: 0 2px;
     color: #586874;
+    font-weight: bold;
+}
+
+table.entity span.entity-property-nullable.nullable:before {
+    content: "N";
 }
 
 table.entity .entity-key:before {
     content: "🔑";
-    padding: 0 2px;
 }
 
 .diagram-canvas.navigable span.entity-name {
-    flex: 1 0 0;
+    flex-grow: 1;
     text-align: center;
     cursor: pointer;
 }
@@ -272,4 +326,8 @@ table.entity .entity-key:before {
 .navigator>div>* {
     position: unset;
     margin: 5px;
+}
+
+.navigator select {
+    padding: 8px;
 }
