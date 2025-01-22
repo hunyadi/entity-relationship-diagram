@@ -14,7 +14,6 @@ import SpectralLayout from "./spectral";
 import TabPanel from "./tabpanel";
 import Zoomable from "./zoomable";
 import { toSVG, downloadSVG } from "./htmlsvg";
-//import { Toolbar } from "./toolbar";
 // import styles from "./erdiagram.module.css";
 
 declare interface TypeList {
@@ -203,22 +202,7 @@ class EntityDiagram {
         });
 
         this.diagram = new DiagramCanvas(elem);
-
-        /*const toolbar = new Toolbar();
-        toolbar.add("save-as-svg", "Save as SVG", () => {
-            const svg = toSVG(this.diagram.element);
-            downloadSVG(svg);
-        });
-
         elem.classList.add("diagram");
-        elem.append(toolbar.element);*/
-
-        const btnDownload = document.getElementById("btn-download")!;
-        btnDownload.addEventListener("click", () => {
-            const svg = toSVG(this.diagram.element);
-            downloadSVG(svg);
-        });
-
         elem.append(this.diagram.element);
     }
 
@@ -442,6 +426,16 @@ class EntityRelationshipFactoryImpl implements EntityRelationshipFactory {
 
 declare global {
     interface Window { erd: any, TabPanel: any; }
+}
+
+const btnDownload = document.querySelector(".actions .btn-download");
+if (btnDownload) {
+    btnDownload.addEventListener("click", () => {
+        const canvas = document.querySelector(".tab-active>*:first-child") as HTMLElement | null;
+        if (canvas) {
+            downloadSVG(toSVG(canvas));
+        }
+    });
 }
 
 // export symbols to caller domain (necessary in Closure Compiler context)

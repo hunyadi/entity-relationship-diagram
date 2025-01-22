@@ -13,7 +13,11 @@
     <div id="tab-panel" class="tab-panel">
         <header class="header">
             <div class="logo">
-                <h1>Entity Relationship Diagram</h1>
+                <h1>Interactive demonstration for <a
+                        href="https://github.com/hunyadi/entity-relationship-diagram">Entity Relationship Diagram</a>
+                    <br />
+                    by <a href="https://hunyadi.info.hu">Levente Hunyadi</a>
+                </h1>
             </div>
             <div class="tabs tab-selector">
                 <span data-tab="navigable" class="tab tab-active">Navigable</span>
@@ -21,11 +25,11 @@
                 <span data-tab="spectral" class="tab">Spectral</span>
             </div>
             <div class="actions">
-                <button class="btn-primary" id="btn-download">Download as SVG</button>
+                <button class="btn-primary btn-download">Download as SVG</button>
             </div>
         </header>
         <div class="tab-view">
-            <div id="navigable-diagram" class="diagram" data-tab="navigable">
+            <div id="navigable-diagram" data-tab="navigable">
                 <div class="navigator">
                     <div class="left"></div>
                     <div class="center">
@@ -34,8 +38,8 @@
                     <div class="right"></div>
                 </div>
             </div>
-            <div id="elastic-diagram" class="diagram" data-tab="elastic"></div>
-            <div id="spectral-diagram" class="diagram" data-tab="spectral"></div>
+            <div id="elastic-diagram" data-tab="elastic"></div>
+            <div id="spectral-diagram" data-tab="spectral"></div>
         </div>
     </div>
 </body>

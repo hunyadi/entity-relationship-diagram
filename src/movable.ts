@@ -22,6 +22,7 @@ abstract class Positionable {
     private mouseMoveListener = (event: MouseEvent) => {
         event.preventDefault();
         event.stopPropagation();
+        document.getSelection()?.empty();
         this.update(event, true);
     };
 
