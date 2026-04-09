@@ -6,6 +6,56 @@ function shuffle(array) {
     }
 }
 
+class TabPanel {
+    #view;
+    #selector;
+
+    constructor(panel) {
+        this.#view = panel.querySelector(".tab-view");
+
+        this.#selector = panel.querySelector(".tab-selector");
+        for (const child of this.#selector.children) {
+            child.addEventListener("click", (event) => {
+                const selected = event.target;
+                this.activateByName(selected.dataset["tab"]);
+            });
+        }
+        this.activateByIndex(0);
+    }
+
+    activateByIndex(index) {
+        this.#deactivateTabs();
+        const tab = this.#selector.children[index];
+        const view = this.#view.children[index];
+        this.#activateTab(tab, view);
+    }
+
+    activateByName(tag) {
+        this.#deactivateTabs();
+        const tab = this.#selector.querySelector('[data-tab="' + tag + '"]');
+        const view = this.#view.querySelector('[data-tab="' + tag + '"]');
+        this.#activateTab(tab, view);
+    }
+
+    #activateTab(tab, view) {
+        if (tab) {
+            tab.classList.add("tab-active");
+        }
+        if (view) {
+            view.classList.add("tab-active");
+        }
+    }
+
+    #deactivateTabs() {
+        for (const child of this.#selector.children) {
+            child.classList.remove("tab-active");
+        }
+        for (const child of this.#view.children) {
+            child.classList.remove("tab-active");
+        }
+    }
+}
+
 function getSimpleSetup() {
     return {
         entities: {
@@ -133,7 +183,7 @@ function getComplexSetup() {
 }
 
 function displayElasticDiagram(setup) {
-    diagram = erd.createElasticDiagram(document.getElementById("elastic-diagram"), setup, {
+    return erd.createElasticDiagram(document.getElementById("elastic-diagram"), setup, {
         charge: 1000,
         stiffness: 0.2,
         drag: 0.5,
@@ -143,11 +193,11 @@ function displayElasticDiagram(setup) {
 }
 
 function displayNavigableDiagram(setup) {
-    diagram = erd.createNavigableDiagram(document.getElementById("navigable-diagram"), setup);
+    return erd.createNavigableDiagram(document.getElementById("navigable-diagram"), setup);
 }
 
 function displaySpectralDiagram(setup) {
-    diagram = erd.createSpectralDiagram(document.getElementById("spectral-diagram"), setup);
+    return erd.createSpectralDiagram(document.getElementById("spectral-diagram"), setup);
 }
 
 window.addEventListener("load", () => {

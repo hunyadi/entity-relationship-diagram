@@ -67,12 +67,16 @@ class ElasticLayoutObject {
  * objects that move at high speeds.
  */
 export class ElasticLayout {
-    private objects: ElasticLayoutObject[];
-    private connectivity: BooleanMatrix;
-    private lastTimestamp: DOMHighResTimeStamp = 0;
-    private running: boolean = false;
+    #options: ElasticLayoutOptions
+    #canvas: HTMLElement
+    #objects: ElasticLayoutObject[];
+    #connectivity: BooleanMatrix;
+    #lastTimestamp: DOMHighResTimeStamp = 0;
+    #running: boolean = false;
 
-    constructor(private options: ElasticLayoutOptions, private canvas: HTMLElement, elements: HTMLElement[], isConnectedFunc: ConnectionCheckerFunction) {
+    constructor(options: ElasticLayoutOptions, canvas: HTMLElement, elements: HTMLElement[], isConnectedFunc: ConnectionCheckerFunction) {
+        this.#options = options;
+        this.#canvas = canvas;
         withDefaults<ElasticLayoutOptions>()({
             charge: 1000,
             stiffness: 0.2,
@@ -81,26 +85,26 @@ export class ElasticLayout {
             iterations: 250,
         });
 
-        this.objects = elements.map(element => new ElasticLayoutObject(element));
+        this.#objects = elements.map(element => new ElasticLayoutObject(element));
 
-        this.connectivity = new BooleanMatrix(elements.length, elements.length);
-        for (let [i, source] of this.objects.entries()) {
-            for (let [j, target] of this.objects.entries()) {
-                this.connectivity.set(i, j, isConnectedFunc(source.element, target.element));
+        this.#connectivity = new BooleanMatrix(elements.length, elements.length);
+        for (let [i, source] of this.#objects.entries()) {
+            for (let [j, target] of this.#objects.entries()) {
+                this.#connectivity.set(i, j, isConnectedFunc(source.element, target.element));
             }
         }
     }
 
-    private getCenterPosition(): Vector {
-        const containerRect = this.canvas.getBoundingClientRect();
+    #getCenterPosition(): Vector {
+        const containerRect = this.#canvas.getBoundingClientRect();
         return new Vector(containerRect.width / 2, containerRect.height / 2);
     }
 
     /**
      * Produces a list of objects that participate in elastic layout.
      */
-    private getDynamicObjects(): ElasticLayoutObject[] {
-        return this.objects.filter(obj => {
+    #getDynamicObjects(): ElasticLayoutObject[] {
+        return this.#objects.filter(obj => {
             return (obj.element.style.getPropertyPriority("left") != "important" && obj.element.style.getPropertyPriority("top") != "important");
         });
     }
@@ -108,8 +112,8 @@ export class ElasticLayout {
     /**
      * Reads position information from HTML layout into internal data structures.
      */
-    private loadPosition(objects: ElasticLayoutObject[]): void {
-        const containerRect = this.canvas.getBoundingClientRect();
+    #loadPosition(objects: ElasticLayoutObject[]): void {
+        const containerRect = this.#canvas.getBoundingClientRect();
         const containerRef = new Point(containerRect.x, containerRect.y);
 
         objects.forEach(obj => {
@@ -122,7 +126,7 @@ export class ElasticLayout {
     /**
      * Sets position information in HTML layout based on data in internal data structures.
      */
-    private savePosition(objects: ElasticLayoutObject[]): void {
+    #savePosition(objects: ElasticLayoutObject[]): void {
         objects.forEach(obj => {
             // update position (unless an explicit value is forced with !important)
             obj.element.style.left = (obj.position.x - obj.size.width / 2) + "px";
@@ -133,36 +137,36 @@ export class ElasticLayout {
         });
     }
 
-    private isConnected(source: ElasticLayoutObject, target: ElasticLayoutObject) {
-        const sourceIndex = this.objects.indexOf(source);
-        const targetIndex = this.objects.indexOf(target);
-        return this.connectivity.get(sourceIndex, targetIndex);
+    #isConnected(source: ElasticLayoutObject, target: ElasticLayoutObject) {
+        const sourceIndex = this.#objects.indexOf(source);
+        const targetIndex = this.#objects.indexOf(target);
+        return this.#connectivity.get(sourceIndex, targetIndex);
     }
 
     initialize(): void {
-        const center = this.getCenterPosition();
-        const objects = this.getDynamicObjects();
-        this.loadPosition(objects);
+        const center = this.#getCenterPosition();
+        const objects = this.#getDynamicObjects();
+        this.#loadPosition(objects);
 
-        this.step(center, objects, 0.1);
-        for (let k = 0; k < this.options.iterations; ++k) {
-            this.step(center, objects, 0.1);
+        this.#step(center, objects, 0.1);
+        for (let k = 0; k < this.#options.iterations; ++k) {
+            this.#step(center, objects, 0.1);
         }
-        this.reset(center, objects);
-        this.savePosition(objects);
-        this.running = false;
+        this.#reset(center, objects);
+        this.#savePosition(objects);
+        this.#running = false;
 
         this.start();
     }
 
     start(): void {
-        this.running = true;
-        this.lastTimestamp = performance.now();
-        window.requestAnimationFrame(this.tick.bind(this));
+        this.#running = true;
+        this.#lastTimestamp = performance.now();
+        window.requestAnimationFrame(this.#tick.bind(this));
     }
 
     stop(): void {
-        this.running = false;
+        this.#running = false;
     }
 
     /**
@@ -170,7 +174,7 @@ export class ElasticLayout {
      * @param centerPos The central position of the viewport.
      * @param objects List of objects that participate in elastic layout.
      */
-    private reset(centerPos: Vector, objects: ElasticLayoutObject[]): void {
+    #reset(centerPos: Vector, objects: ElasticLayoutObject[]): void {
         const mean = Vector.mean(objects.map(obj => obj.position));
         const offset = centerPos.minus(mean);
         objects.forEach(obj => {
@@ -186,7 +190,7 @@ export class ElasticLayout {
      * @param objects List of objects that participate in elastic layout.
      * @param elapsed A time delta that elapsed since the last invocation.
      */
-    private step(centerPos: Vector, objects: ElasticLayoutObject[], elapsed: DOMHighResTimeStamp): void {
+    #step(centerPos: Vector, objects: ElasticLayoutObject[], elapsed: DOMHighResTimeStamp): void {
         objects.forEach(obj => {
             let offset = obj.velocity.times(elapsed);
             obj.position.add(offset);
@@ -200,11 +204,11 @@ export class ElasticLayout {
 
             // attraction to center
             const centerDir = centerPos.minus(source.position).normalize();
-            const centerForce = centerDir.times(this.options.gravity);
+            const centerForce = centerDir.times(this.#options.gravity);
             source.force.add(centerForce);
 
             // drag force to dampen speed of fast-moving objects
-            const dragForce = source.velocity.times(-this.options.drag);
+            const dragForce = source.velocity.times(-this.#options.drag);
             source.force.add(dragForce);
 
             for (let j = i + 1; j < objects.length; ++j) {
@@ -215,13 +219,13 @@ export class ElasticLayout {
                 vector.normalize();
 
                 // repulsive force between close items
-                const repulsiveForce = vector.times((this.options.charge * this.options.charge) / (1.0 + distance * distance));
+                const repulsiveForce = vector.times((this.#options.charge * this.#options.charge) / (1.0 + distance * distance));
                 source.force.add(repulsiveForce.reversed());
                 target.force.add(repulsiveForce);
 
                 // attractive force between connected items
-                if (this.isConnected(source, target)) {
-                    const attractiveForce = vector.times(this.options.stiffness * distance);
+                if (this.#isConnected(source, target)) {
+                    const attractiveForce = vector.times(this.#options.stiffness * distance);
                     source.force.add(attractiveForce);
                     target.force.add(attractiveForce.reversed());
                 }
@@ -233,26 +237,26 @@ export class ElasticLayout {
      * Invoked when an animation step is about to be painted.
      * @param timestamp The timestamp received for an animation frame event.
      */
-    private tick(timestamp: DOMHighResTimeStamp) {
-        let elapsed = (timestamp - this.lastTimestamp) / 1000;
+    #tick(timestamp: DOMHighResTimeStamp) {
+        let elapsed = (timestamp - this.#lastTimestamp) / 1000;
         if (elapsed > 5.0) {
             elapsed = 5.0;
         }
 
-        const center = this.getCenterPosition();
-        const objects = this.getDynamicObjects();
-        this.loadPosition(objects);
+        const center = this.#getCenterPosition();
+        const objects = this.#getDynamicObjects();
+        this.#loadPosition(objects);
         while (elapsed > 0.1) {
-            this.step(center, objects, 0.1);
+            this.#step(center, objects, 0.1);
             elapsed -= 0.1;
         }
 
-        this.step(center, objects, elapsed);
-        this.savePosition(objects);
+        this.#step(center, objects, elapsed);
+        this.#savePosition(objects);
 
-        if (this.running) {
-            this.lastTimestamp = timestamp;
-            window.requestAnimationFrame(this.tick.bind(this));
+        if (this.#running) {
+            this.#lastTimestamp = timestamp;
+            window.requestAnimationFrame(this.#tick.bind(this));
         }
     }
 }

@@ -14,8 +14,8 @@ import { setPosition } from "./htmlpos";
 * Permits an element to be zoomed with mouse wheel.
 */
 export default class Zoomable {
-    private static readonly zoomLevels = [0.1, 0.25, 0.33, 0.50, 0.67, 0.75, 0.8, 0.9, 1.0, 1.1, 1.25, 1.50, 1.75, 2.0, 2.5, 3.0, 4.0, 5.0];
-    private zoomIndex = Zoomable.zoomLevels.indexOf(1.0);
+    static readonly #zoomLevels = [0.1, 0.25, 0.33, 0.50, 0.67, 0.75, 0.8, 0.9, 1.0, 1.1, 1.25, 1.50, 1.75, 2.0, 2.5, 3.0, 4.0, 5.0];
+    #zoomIndex = Zoomable.#zoomLevels.indexOf(1.0);
 
     /**
      * Makes an HTML element zoom in and out with mouse wheel actions.
@@ -28,13 +28,13 @@ export default class Zoomable {
             event.stopPropagation();
 
             // calculate target zoom level
-            const prevZoom = Zoomable.zoomLevels[this.zoomIndex]!;
-            if (event.deltaY > 0 && this.zoomIndex > 0) {
-                this.zoomIndex -= 1;
-            } else if (event.deltaY < 0 && this.zoomIndex < Zoomable.zoomLevels.length - 1) {
-                this.zoomIndex += 1;
+            const prevZoom = Zoomable.#zoomLevels[this.#zoomIndex]!;
+            if (event.deltaY > 0 && this.#zoomIndex > 0) {
+                this.#zoomIndex -= 1;
+            } else if (event.deltaY < 0 && this.#zoomIndex < Zoomable.#zoomLevels.length - 1) {
+                this.#zoomIndex += 1;
             }
-            const nextZoom = Zoomable.zoomLevels[this.zoomIndex]!;
+            const nextZoom = Zoomable.#zoomLevels[this.#zoomIndex]!;
             const magnify = nextZoom / prevZoom;
 
             // reposition elements

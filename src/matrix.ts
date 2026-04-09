@@ -47,7 +47,7 @@ interface TypedArray<ValueType> {
  * A vector or real numbers.
  */
 class RealArray implements TypedArray<number> {
-    private data: Float64Array;
+    #data: Float64Array;
     public size: SizeType;
 
     constructor(size: SizeType);
@@ -55,60 +55,60 @@ class RealArray implements TypedArray<number> {
 
     constructor(arg: SizeType | Float64Array) {
         if (arg instanceof Float64Array) {
-            this.data = arg;
-            this.size = this.data.length;
+            this.#data = arg;
+            this.size = this.#data.length;
         } else {
             this.size = arg;
-            this.data = new Float64Array(this.size);
+            this.#data = new Float64Array(this.size);
         }
     }
 
     get(index: IndexType): number {
-        return this.data[index]!;
+        return this.#data[index]!;
     }
 
     set(index: IndexType, value: number): void {
-        this.data[index] = value;
+        this.#data[index] = value;
     }
 
     duplicate(): TypedArray<number> {
-        const data = new Float64Array(this.data.length);
-        data.set(this.data);
+        const data = new Float64Array(this.#data.length);
+        data.set(this.#data);
         return new RealArray(data);
     }
 
     subarray(begin: IndexType, end: IndexType): TypedArray<number> {
-        return new RealArray(this.data.subarray(begin, end));
+        return new RealArray(this.#data.subarray(begin, end));
     }
 
     sum(): number {
-        return this.data.reduce((partialSum, element) => partialSum + element, 0);
+        return this.#data.reduce((partialSum, element) => partialSum + element, 0);
     }
 
     prod(): number {
-        return this.data.reduce((partialSum, element) => partialSum * element, 1);
+        return this.#data.reduce((partialSum, element) => partialSum * element, 1);
     }
 
     add(op: Readonly<TypedArray<number>>): TypedArray<number> {
         for (let k = 0; k < this.size; ++k) {
-            this.data[k]! += op.get(k);
+            this.#data[k]! += op.get(k);
         }
         return this;
     }
 
     subtract(op: Readonly<TypedArray<number>>): TypedArray<number> {
         for (let k = 0; k < this.size; ++k) {
-            this.data[k]! -= op.get(k);
+            this.#data[k]! -= op.get(k);
         }
         return this;
     }
 
     copyFrom(a: ArrayLike<number>): void {
-        this.data.set(a);
+        this.#data.set(a);
     }
 
     toArray(): number[] {
-        return Array.from(this.data);
+        return Array.from(this.#data);
     }
 }
 
@@ -177,20 +177,20 @@ abstract class GenericMatrix<ValueType> implements Matrix<ValueType> {
 
     abstract diag(): TypedArray<ValueType>;
 
-    private compareShape(op: Readonly<Matrix<ValueType>>): void {
+    #compareShape(op: Readonly<Matrix<ValueType>>): void {
         if (this.rows != op.rows || this.cols != op.cols) {
             throw RangeError("incompatible matrix dimensions");
         }
     }
 
     add(op: Readonly<Matrix<ValueType>>): Matrix<ValueType> {
-        this.compareShape(op);
+        this.#compareShape(op);
         this.data.add(op.data);
         return this;
     }
 
     subtract(op: Readonly<Matrix<ValueType>>): Matrix<ValueType> {
-        this.compareShape(op);
+        this.#compareShape(op);
         this.data.subtract(op.data);
         return this;
     }
@@ -330,12 +330,12 @@ export class Jacobi {
      */
     run(): Jacobi {
         for (let iter = 0; iter < 1000; iter++) {
-            let maximum = this.computeMaximum();
+            let maximum = this.#computeMaximum();
             if (2 * maximum.value < Jacobi.TOLERANCE) {
                 break;
             }
-            const [c, s] = this.computeRotation(maximum.row, maximum.col);
-            this.updateMatrices(maximum.row, maximum.col, c, s);
+            const [c, s] = this.#computeRotation(maximum.row, maximum.col);
+            this.#updateMatrices(maximum.row, maximum.col, c, s);
         }
         return this;
     }
@@ -351,7 +351,7 @@ export class Jacobi {
         );
     }
 
-    private computeMaximum(): MatrixEntry<number> {
+    #computeMaximum(): MatrixEntry<number> {
         let im = 0;
         let jm = 0;
         let am = -Number.MAX_VALUE;
@@ -370,7 +370,7 @@ export class Jacobi {
         };
     }
 
-    private computeRotation(i: number, j: number): [number, number] {
+    #computeRotation(i: number, j: number): [number, number] {
         let beta = (this.A.get(i, i) - this.A.get(j, j)) / 2 / this.A.get(i, j);
         beta /= Math.sqrt(1 + beta * beta);
         const c = Math.sqrt(0.5 + beta / 2);
@@ -378,7 +378,7 @@ export class Jacobi {
         return [c, s];
     }
 
-    private updateMatrices(i: number, j: number, c: number, s: number): void {
+    #updateMatrices(i: number, j: number, c: number, s: number): void {
         const dim = this.A.rows;
         for (let k = 0; k < dim; k++) {
             const xi = c * this.A.get(i, k) + s * this.A.get(j, k);

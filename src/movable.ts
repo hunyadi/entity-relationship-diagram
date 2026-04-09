@@ -17,9 +17,10 @@ import { setPosition } from "./htmlpos";
 * while the action is taking place.
 */
 abstract class Positionable {
+    /** @internal */
     protected mousePos = new Vector(0, 0);
 
-    private mouseMoveListener = (event: MouseEvent) => {
+    #mouseMoveListener = (event: MouseEvent) => {
         event.preventDefault();
         event.stopPropagation();
         document.getSelection()?.empty();
@@ -41,10 +42,10 @@ abstract class Positionable {
             this.capture();
 
             document.addEventListener("mouseup", event => {
-                document.removeEventListener("mousemove", this.mouseMoveListener, true);
+                document.removeEventListener("mousemove", this.#mouseMoveListener, true);
                 this.update(event, false);
             }, { "once": true });
-            document.addEventListener("mousemove", this.mouseMoveListener, true);
+            document.addEventListener("mousemove", this.#mouseMoveListener, true);
         });
     }
 
@@ -56,15 +57,15 @@ abstract class Positionable {
 * Allows a single element to be moved with mouse drag.
  */
 export class Movable extends Positionable {
-    private elementPos = new Vector(0, 0);
+    #elementPos = new Vector(0, 0);
 
     protected capture(): void {
-        this.elementPos = new Vector(this.relatedElement.offsetLeft, this.relatedElement.offsetTop);
+        this.#elementPos = new Vector(this.relatedElement.offsetLeft, this.relatedElement.offsetTop);
     }
 
     protected update(event: MouseEvent, important: boolean): void {
         const delta = new Vector(event.clientX, event.clientY).minus(this.mousePos);
-        const pos = this.elementPos.plus(delta);
+        const pos = this.#elementPos.plus(delta);
         setPosition(this.relatedElement, pos, important);
     }
 }
@@ -73,12 +74,12 @@ export class Movable extends Positionable {
 * Allows a set of elements that share a parent to be moved with mouse drag.
  */
 export class Pannable extends Positionable {
-    private positions = new Map<HTMLElement, Vector>();
+    #positions = new Map<HTMLElement, Vector>();
 
     protected capture(): void {
         for (let e of this.relatedElement.children) {
             const elem = e as HTMLElement;
-            this.positions.set(elem, new Vector(elem.offsetLeft, elem.offsetTop));
+            this.#positions.set(elem, new Vector(elem.offsetLeft, elem.offsetTop));
         }
     }
 
@@ -86,7 +87,7 @@ export class Pannable extends Positionable {
         const delta = new Vector(event.clientX, event.clientY).minus(this.mousePos);
         for (let e of this.relatedElement.children) {
             const elem = e as HTMLElement;
-            const pos = this.positions.get(elem)!.plus(delta);
+            const pos = this.#positions.get(elem)!.plus(delta);
             setPosition(elem, pos, important);
         }
     }

@@ -23,14 +23,20 @@ type GraphEdge<T> = {
  * eigenvalues of the graph Laplacian matrix.
  */
 export default class SpectralLayout<T> {
-    constructor(private nodes: T[], private edges: GraphEdge<T>[]) { }
+    #nodes: T[]
+    #edges: GraphEdge<T>[]
+
+    constructor(nodes: T[], edges: GraphEdge<T>[]) {
+        this.#nodes = nodes;
+        this.#edges = edges;
+    }
 
     calculate(): Vector[] {
         // calculate adjacency matrix
-        const A = RealMatrix.zeros(this.nodes.length, this.nodes.length);
-        this.edges.forEach(edge => {
-            const sourceIndex = this.nodes.indexOf(edge.source);
-            const targetIndex = this.nodes.indexOf(edge.target);
+        const A = RealMatrix.zeros(this.#nodes.length, this.#nodes.length);
+        this.#edges.forEach(edge => {
+            const sourceIndex = this.#nodes.indexOf(edge.source);
+            const targetIndex = this.#nodes.indexOf(edge.target);
             A.set(sourceIndex, targetIndex, 1);
             A.set(targetIndex, sourceIndex, 1);
         });
@@ -56,19 +62,19 @@ export default class SpectralLayout<T> {
         );
 
         // address issues due to potential numerical instability, e.g. convert NaN to 0.0
-        for (let i = 0; i < this.nodes.length; ++i) {
+        for (let i = 0; i < this.#nodes.length; ++i) {
             positions[i]!.canonicalize();
         }
 
         const minimumDistance = 0.1;
 
         // find co-located items
-        for (let i = 0; i < this.nodes.length; ++i) {
+        for (let i = 0; i < this.#nodes.length; ++i) {
             const source = positions[i]!;
             const colocated = new Set<number>();
             colocated.add(i);
 
-            for (let j = i + 1; j < this.nodes.length; ++j) {
+            for (let j = i + 1; j < this.#nodes.length; ++j) {
                 const target = positions[j]!;
                 const distance = target.minus(source).magnitude();
                 if (distance < 1e-8) {
@@ -79,7 +85,7 @@ export default class SpectralLayout<T> {
             // more than one item occupies the same position
             if (colocated.size > 1) {
                 // make space at location where co-located items are
-                for (let k = 0; k < this.nodes.length; ++k) {
+                for (let k = 0; k < this.#nodes.length; ++k) {
                     if (!colocated.has(k)) {
                         const dir = positions[k]!.minus(source).normalize().multiply(2 * minimumDistance);
                         positions[k]!.add(dir);
@@ -96,16 +102,16 @@ export default class SpectralLayout<T> {
         }
 
         // find small distance between items
-        for (let i = 0; i < this.nodes.length; ++i) {
+        for (let i = 0; i < this.#nodes.length; ++i) {
             const source = positions[i]!;
-            for (let j = i + 1; j < this.nodes.length; ++j) {
+            for (let j = i + 1; j < this.#nodes.length; ++j) {
                 const target = positions[j]!;
                 const distance = target.minus(source).magnitude();
 
                 if (distance < minimumDistance) {
                     // push items apart that are too close to each other
                     const mid = source.plus(target).multiply(0.5);
-                    for (let k = 0; k < this.nodes.length; ++k) {
+                    for (let k = 0; k < this.#nodes.length; ++k) {
                         positions[k]!.add(positions[k]!.minus(mid).normalize().multiply(minimumDistance));
                     }
                 }

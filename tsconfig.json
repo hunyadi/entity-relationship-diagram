@@ -1,15 +1,22 @@
 {
     "compilerOptions": {
-        "outDir": "js",
         "target": "ES2017",
-        "module": "commonjs",
-        "allowUnreachableCode": false,
-        "allowUnusedLabels": false,
+        "module": "ESNext",
+        "moduleResolution": "bundler",
         "lib": [
             "DOM",
             "DOM.Iterable",
             "ES2017"
         ],
+        "types": [
+            "node"
+        ],
+        "allowUnreachableCode": false,
+        "allowUnusedLabels": false,
+        "exactOptionalPropertyTypes": true,
+        "forceConsistentCasingInFileNames": true,
+        "noEmit": true,
+        "noFallthroughCasesInSwitch": true,
         "noImplicitOverride": true,
         "noImplicitReturns": true,
         "noPropertyAccessFromIndexSignature": true,
@@ -17,6 +24,11 @@
         "noUnusedLocals": true,
         "noUnusedParameters": true,
         "preserveConstEnums": true,
+        "skipLibCheck": true,
         "strict": true,
-    }
+    },
+    "include": [
+        "src/**/*.ts",
+        "test/**/*.ts"
+    ]
 }

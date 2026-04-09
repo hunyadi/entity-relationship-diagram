@@ -1,15 +1,7 @@
 {
   "name": "entity-relationship-diagram",
-  "description": "An HTML5 entity relationship diagram with entities as HTML elements and relationships as SVG Beziér curves. Items are arranged on a drawing canvas with a force-based or a spectral layout.",
   "version": "0.1.2",
-  "main": "./src/erdiagram.ts",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/hunyadi/entity-relationship-diagram.git"
-  },
+  "description": "An HTML5 entity relationship diagram with entities as HTML elements and relationships as SVG Beziér curves. Items are arranged on a drawing canvas with a force-based or a spectral layout.",
   "keywords": [
     "entity",
     "relationship",
@@ -19,19 +11,54 @@
     "navigable",
     "spectral"
   ],
-  "author": {
-    "name": "Levente Hunyadi",
-    "url": "https://hunyadi.info.hu/"
-  },
-  "license": "MIT",
+  "homepage": "https://github.com/hunyadi/entity-relationship-diagram#readme",
   "bugs": {
     "url": "https://github.com/hunyadi/entity-relationship-diagram/issues"
   },
-  "homepage": "https://github.com/hunyadi/entity-relationship-diagram#readme",
+  "license": "MIT",
+  "author": {
+    "name": "Levente Hunyadi",
+    "url": "https://hunyadi.info.hu/levente/"
+  },
+  "type": "module",
+  "main": "dist/erdiagram.js",
+  "module": "dist/erdiagram.js",
+  "types": "dist/erdiagram.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/erdiagram.d.ts",
+      "import": "./dist/erdiagram.js",
+      "default": "./dist/erdiagram.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "build:types": "tsc -p tsconfig.declarations.json",
+    "build": "npm run build:types && esbuild src/erdiagram.ts --bundle --format=iife --platform=browser --outfile=dist/erdiagram.js",
+    "build:watch": "esbuild src/erdiagram.ts --bundle --format=iife --platform=browser --outfile=dist/erdiagram.js --watch --servedir=.",
+    "build:web": "webpack --config webpack.config.js",
+    "build:web:watch": "webpack --config webpack.config.js --watch",
+    "test": "tsx --test",
+    "prepublishOnly": "npm run build && npm run build:web && npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hunyadi/entity-relationship-diagram.git"
+  },
   "devDependencies": {
-    "typescript": "^5.7",
-    "webpack": "^5.97",
-    "webpack-cli": "^6.0",
-    "ts-loader": "^9.5"
+    "esbuild": "^0.28",
+    "ts-loader": "^9.5",
+    "tsx": "^4.21",
+    "typescript": "^6.0",
+    "webpack": "^5.106",
+    "webpack-cli": "^6.0"
   }
 }

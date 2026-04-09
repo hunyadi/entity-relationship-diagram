@@ -12,11 +12,16 @@ import { createSVGElement, FirstVisibleAncestor, IsAncestorSelected } from "./ht
 import { makeIdentifier } from "./unique";
 
 abstract class Shape {
+    /** @internal */
+    protected elem: SVGElement;
+
     /**
      * Creates a shape in the diagram.
      * @param elem The SVG element associated with this shape.
      */
-    constructor(protected elem: SVGElement) { }
+    constructor(elem: SVGElement) {
+        this.elem = elem;
+    }
 
     get element(): SVGElement {
         return this.elem;
@@ -24,14 +29,21 @@ abstract class Shape {
 }
 
 abstract class Connector extends Shape {
+    /** @internal */
+    protected sourceElement: HTMLElement;
+    /** @internal */
+    protected targetElement: HTMLElement;
+
     /**
      * Creates a connector that connects two HTML elements in the diagram.
      * @param elem The SVG element associated with this connector.
      * @param sourceElement The HTML element acting as the source endpoint.
      * @param targetElement The HTML element acting as the target endpoint.
      */
-    constructor(elem: SVGElement, protected sourceElement: HTMLElement, protected targetElement: HTMLElement) {
+    constructor(elem: SVGElement, sourceElement: HTMLElement, targetElement: HTMLElement) {
         super(elem);
+        this.sourceElement = sourceElement;
+        this.targetElement = targetElement;
     }
 
     get source(): HTMLElement {
@@ -65,25 +77,25 @@ export class DiagramCanvas {
     public host: HTMLDivElement;
 
     /** The SVG element that encapsulates connectors in a separate layer. */
-    private svg: SVGSVGElement;
+    #svg: SVGSVGElement;
 
     /** Set of all elements. */
-    private elements: HTMLElement[] = [];
+    #elements: HTMLElement[] = [];
 
     /** Set of all connectors. */
-    private connectors: Connector[] = [];
+    #connectors: Connector[] = [];
 
     /** Listens to source and target element size changes. */
-    private resizeObserver: ResizeObserver;
+    #resizeObserver: ResizeObserver;
 
     /** Listens to position or visibility changes. */
-    private styleObserver: MutationObserver;
+    #styleObserver: MutationObserver;
 
     /** Listens to removing elements from the diagram. */
-    private childObserver: MutationObserver;
+    #childObserver: MutationObserver;
 
     /** True if the diagram is to be redrawn in the next paint cycle. */
-    private repainting: boolean = false;
+    #repainting: boolean = false;
 
     readonly markerWidth: number = 10;
     readonly markerHeight: number = 7;
@@ -104,9 +116,9 @@ export class DiagramCanvas {
         }
 
         // set up layer in which connections are drawn
-        this.svg = createSVGElement("svg") as SVGSVGElement;
-        this.initializeConnectorLayer();
-        container.append(this.svg);
+        this.#svg = createSVGElement("svg") as SVGSVGElement;
+        this.#initializeConnectorLayer();
+        container.append(this.#svg);
 
         // set up item host layer in which connectable elements reside
         this.host = document.createElement("div");
@@ -114,19 +126,19 @@ export class DiagramCanvas {
         container.append(this.host);
 
         // set up observers to monitor size, position and visibility changes
-        const observer = new ResizeObserver(this.redraw.bind(this));
+        const observer = new ResizeObserver(this.#redraw.bind(this));
         observer.observe(this.host);
 
-        this.resizeObserver = new ResizeObserver(this.redraw.bind(this));
-        this.styleObserver = new MutationObserver(this.redraw.bind(this));
+        this.#resizeObserver = new ResizeObserver(this.#redraw.bind(this));
+        this.#styleObserver = new MutationObserver(this.#redraw.bind(this));
 
         // set up observer to monitor removing dangling connectors
-        this.childObserver = new MutationObserver(mutationsList => {
+        this.#childObserver = new MutationObserver(mutationsList => {
             let unattachedConnectors: Set<Connector> = new Set();
 
             mutationsList.forEach(mutation => {
                 mutation.removedNodes.forEach(node => {
-                    this.connectors.forEach(connector => {
+                    this.#connectors.forEach(connector => {
                         if (node.contains(connector.source) || node.contains(connector.target)) {
                             unattachedConnectors.add(connector);
                         }
@@ -137,14 +149,14 @@ export class DiagramCanvas {
             unattachedConnectors.forEach(connector => {
                 connector.remove();
             });
-            this.connectors = this.connectors.filter(connector => !unattachedConnectors.has(connector));
+            this.#connectors = this.#connectors.filter(connector => !unattachedConnectors.has(connector));
         });
 
         this.element = container;
         this.clear();
     }
 
-    private initializeConnectorLayer(): void {
+    #initializeConnectorLayer(): void {
         this.markers.set(MarkerState.Regular, makeIdentifier());
         this.markers.set(MarkerState.SourceSelected, makeIdentifier());
         this.markers.set(MarkerState.TargetSelected, makeIdentifier());
@@ -157,7 +169,7 @@ export class DiagramCanvas {
             markerDefs.push(marker);
         }
         defs.innerHTML = markerDefs.join("");
-        this.svg.append(defs);
+        this.#svg.append(defs);
     }
 
     /**
@@ -168,7 +180,7 @@ export class DiagramCanvas {
      * @returns True if the elements are connected at some level in the DOM hierarchy.
      */
     isConnectedTo(source: HTMLElement, target: HTMLElement): boolean {
-        return this.connectors.some(connector => {
+        return this.#connectors.some(connector => {
             return source.contains(connector.source) && target.contains(connector.target);
         });
     }
@@ -185,13 +197,13 @@ export class DiagramCanvas {
     }
 
     addElement(element: HTMLElement): void {
-        this.elements.push(element);
+        this.#elements.push(element);
         if (!this.host.contains(element)) {
             this.host.append(element);
         }
 
         element.addEventListener("mousedown", () => {
-            this.elements.forEach(e => {
+            this.#elements.forEach(e => {
                 e.classList.remove("selected");
             });
             element.classList.add("selected");
@@ -199,17 +211,17 @@ export class DiagramCanvas {
     }
 
     addConnector(connector: Connector): void {
-        this.connectors.push(connector);
-        this.svg.appendChild(connector.element);
+        this.#connectors.push(connector);
+        this.#svg.appendChild(connector.element);
 
-        this.observeConnectorEndpoint(connector.source);
-        this.observeConnectorEndpoint(connector.target);
+        this.#observeConnectorEndpoint(connector.source);
+        this.#observeConnectorEndpoint(connector.target);
     }
 
     removeConnector(connector: Connector): void {
-        const connectors = this.connectors.filter(c => c !== connector);
+        const connectors = this.#connectors.filter(c => c !== connector);
         connector.remove();
-        this.resizeObserver.disconnect();
+        this.#resizeObserver.disconnect();
 
         connectors.forEach(connector => {
             this.addConnector(connector);
@@ -217,30 +229,30 @@ export class DiagramCanvas {
     }
 
     clear(): void {
-        this.childObserver.disconnect();
+        this.#childObserver.disconnect();
 
-        this.connectors.forEach(connector => {
+        this.#connectors.forEach(connector => {
             connector.remove();
         });
-        this.resizeObserver.disconnect();
-        this.connectors = [];
+        this.#resizeObserver.disconnect();
+        this.#connectors = [];
 
-        this.elements.forEach(element => {
+        this.#elements.forEach(element => {
             element.remove();
         });
-        this.elements = [];
+        this.#elements = [];
 
-        this.childObserver.observe(this.host, { subtree: true, childList: true });
-        this.styleObserver.observe(this.host, { subtree: true, attributeFilter: ["class", "style"] });
+        this.#childObserver.observe(this.host, { subtree: true, childList: true });
+        this.#styleObserver.observe(this.host, { subtree: true, attributeFilter: ["class", "style"] });
     }
 
-    private observeConnectorEndpoint(element: HTMLElement): void {
+    #observeConnectorEndpoint(element: HTMLElement): void {
         // trigger redraw if endpoint element size changes
-        this.resizeObserver.observe(element);
+        this.#resizeObserver.observe(element);
 
         // listen to events on closest positioned ancestor to handle left/top expressed as percentage
         if (element.offsetParent) {
-            this.resizeObserver.observe(element.offsetParent);
+            this.#resizeObserver.observe(element.offsetParent);
         }
     }
 
@@ -251,7 +263,7 @@ export class DiagramCanvas {
      */
     getBoundingRect(element: Element): Rect {
         const rect = element.getBoundingClientRect();
-        const refRect = this.svg.getBoundingClientRect();
+        const refRect = this.#svg.getBoundingClientRect();
         return new Rect(
             rect.left - refRect.left,
             rect.top - refRect.top,
@@ -279,26 +291,26 @@ export class DiagramCanvas {
     /**
      * Causes connections to be redrawn in the next paint cycle.
      */
-    private redraw() {
-        if (!this.repainting) {
-            window.requestAnimationFrame(this.repaint.bind(this));
-            this.repainting = true;
+    #redraw() {
+        if (!this.#repainting) {
+            window.requestAnimationFrame(this.#repaint.bind(this));
+            this.#repainting = true;
         }
     }
 
     /**
      * Causes connections to be redrawn as part of the current paint cycle.
      */
-    private repaint() {
-        if (this.connectors.length > 0) {
+    #repaint() {
+        if (this.#connectors.length > 0) {
             const visibility = new FirstVisibleAncestor();
             const selected = new IsAncestorSelected("selected", this.host);
-            this.connectors.forEach(connector => {
+            this.#connectors.forEach(connector => {
                 // redraw a connector if one of its endpoint elements has changed position or size
                 connector.draw(this, visibility, selected);
             });
         }
-        this.repainting = false;
+        this.#repainting = false;
     }
 }
 

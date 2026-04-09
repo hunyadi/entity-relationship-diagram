@@ -10,14 +10,19 @@
 type ComputeFunction<KeyType, ValueType> = (item: KeyType) => ValueType;
 
 class Memoizer<KeyType, ValueType> {
+    #compute: ComputeFunction<KeyType, ValueType>
+
+    /** @internal */
     protected cache = new Map<KeyType, ValueType>();
 
-    constructor(private compute: ComputeFunction<KeyType, ValueType>) { }
+    constructor(compute: ComputeFunction<KeyType, ValueType>) {
+        this.#compute = compute;
+    }
 
     get(item: KeyType): ValueType {
         let match = this.cache.get(item);
         if (match === undefined) {
-            match = this.compute(item);
+            match = this.#compute(item);
             this.cache.set(item, match);
         }
         return match;

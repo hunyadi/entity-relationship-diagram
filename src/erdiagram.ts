@@ -11,7 +11,6 @@ import { Arrow, DiagramCanvas } from "./diagram";
 import { ElasticLayout, ElasticLayoutOptions } from "./elastic";
 import { Movable, Pannable } from "./movable";
 import SpectralLayout from "./spectral";
-import TabPanel from "./tabpanel";
 import Zoomable from "./zoomable";
 import { toSVG, downloadSVG } from "./htmlsvg";
 // import styles from "./erdiagram.module.css";
@@ -87,18 +86,20 @@ interface Renderable {
 }
 
 class EntityPropertyElement implements Renderable {
-    private elem: HTMLTableCellElement;
+    #entity: EntityElement
+    #elem: HTMLTableCellElement;
 
-    constructor(private entity: EntityElement, propertyName: string) {
-        this.elem = entity.element.querySelector(`td[data-property="${propertyName}"]`)!;
+    constructor(entity: EntityElement, propertyName: string) {
+        this.#entity = entity;
+        this.#elem = entity.element.querySelector(`td[data-property="${propertyName}"]`)!;
     }
 
     public get element(): HTMLElement {
-        return this.elem;
+        return this.#elem;
     }
 
     public get parent(): EntityElement {
-        return this.entity;
+        return this.#entity;
     }
 }
 
@@ -106,12 +107,12 @@ class EntityPropertyElement implements Renderable {
  * Represents an entity in an entity relationship diagram (ERD).
  */
 class EntityElement implements Renderable {
-    private elem: HTMLTableElement;
+    #elem: HTMLTableElement;
 
     constructor(public name: string, features: EntityFeatures) {
-        this.elem = document.createElement("table");
+        this.#elem = document.createElement("table");
         //this.elem.classList.add(styles.entity);
-        this.elem.classList.add("entity");
+        this.#elem.classList.add("entity");
 
         // generate HTML DOM representation of entity
         const body = document.createElement("tbody");
@@ -136,39 +137,39 @@ class EntityElement implements Renderable {
             tr.append(td);
             body.append(tr);
         }
-        this.elem.insertAdjacentHTML("beforeend", `<thead><tr><th><span class="toggle"></span><span class="entity-name">${this.name}</span></th></tr></thead>`);
-        this.elem.append(body);
+        this.#elem.insertAdjacentHTML("beforeend", `<thead><tr><th><span class="toggle"></span><span class="entity-name">${this.name}</span></th></tr></thead>`);
+        this.#elem.append(body);
 
-        this.toggler.addEventListener("click", (event) => {
+        this.#toggler.addEventListener("click", (event) => {
             event.preventDefault();
             event.stopPropagation();
-            this.compact(!this.toggler.classList.contains("collapsed"));
+            this.compact(!this.#toggler.classList.contains("collapsed"));
         });
     }
 
     public get element(): HTMLElement {
-        return this.elem;
+        return this.#elem;
     }
 
-    private get head(): HTMLElement {
-        return this.elem.querySelector("thead")!;
+    get #head(): HTMLElement {
+        return this.#elem.querySelector("thead")!;
     }
 
-    private get body(): HTMLElement {
-        return this.elem.querySelector("tbody")!;
+    get #body(): HTMLElement {
+        return this.#elem.querySelector("tbody")!;
     }
 
-    private get toggler(): HTMLElement {
-        return this.elem.querySelector("thead>tr>th>span.toggle")!;
+    get #toggler(): HTMLElement {
+        return this.#elem.querySelector("thead>tr>th>span.toggle")!;
     }
 
     get heading(): HTMLElement {
-        return this.head.querySelector("span.entity-name")!;
+        return this.#head.querySelector("span.entity-name")!;
     }
 
     compact(state: boolean) {
-        this.body.classList.toggle("hidden", state);
-        this.toggler.classList.toggle("collapsed", state);
+        this.#body.classList.toggle("hidden", state);
+        this.#toggler.classList.toggle("collapsed", state);
     }
 
     property(id: string): EntityPropertyElement {
@@ -181,8 +182,11 @@ class EntityRelationshipElement {
 }
 
 class EntityDiagram {
+    /** @internal */
     protected diagram: DiagramCanvas;
+    /** @internal */
     protected entities = new Map<string, EntityElement>();
+    /** @internal */
     protected relationships: EntityRelationshipElement[] = [];
 
     constructor(elem: HTMLElement, data: EntityRelationshipData) {
@@ -211,18 +215,18 @@ class EntityDiagram {
             const sourceEntity = data.entities[relationship.source.entity];
             const targetEntity = data.entities[relationship.target.entity];
             if (!sourceEntity || !targetEntity) {
-                EntityDiagram.error(relationship, "entity", sourceEntity, targetEntity);
+                EntityDiagram.#error(relationship, "entity", sourceEntity, targetEntity);
             }
 
             const sourceProperty = sourceEntity.properties[relationship.source.property];
             const targetProperty = targetEntity.properties[relationship.target.property];
             if (!sourceProperty || !targetProperty) {
-                EntityDiagram.error(relationship, "property", sourceProperty, targetProperty);
+                EntityDiagram.#error(relationship, "property", sourceProperty, targetProperty);
             }
         });
     }
 
-    private static error(relationship: EntityRelationship, kind: string, source: object | undefined, target: object | undefined): never {
+    static #error(relationship: EntityRelationship, kind: string, source: object | undefined, target: object | undefined): never {
         let origin;
         if (!source) {
             origin = "source";
@@ -241,10 +245,10 @@ class ElasticEntityDiagram extends EntityDiagram {
         classList.add("canvaslike");
         classList.add("elastic");
 
-        this.layout(options);
+        this.#layout(options);
     }
 
-    private layout(options: ElasticLayoutOptions): void {
+    #layout(options: ElasticLayoutOptions): void {
         this.entities.forEach(entity => {
             entity.compact(true);
             this.diagram.addElement(entity.element);
@@ -280,12 +284,12 @@ class ElasticEntityDiagram extends EntityDiagram {
 }
 
 class NavigableEntityDiagram extends EntityDiagram {
-    private selector: HTMLSelectElement;
+    #selector: HTMLSelectElement;
 
     constructor(elem: HTMLElement, data: EntityRelationshipData) {
         super(elem, data);
         this.diagram.element.classList.add("navigable");
-        this.selector = this.diagram.host.querySelector("select")!;
+        this.#selector = this.diagram.host.querySelector("select")!;
 
         this.entities.forEach(entity => {
             entity.compact(true);
@@ -296,28 +300,28 @@ class NavigableEntityDiagram extends EntityDiagram {
 
             const option = document.createElement("option");
             option.innerText = entity.name;
-            this.selector.append(option);
+            this.#selector.append(option);
         });
-        this.selector.addEventListener("change", () => {
-            const selected = this.entities.get(this.selector.value);
+        this.#selector.addEventListener("change", () => {
+            const selected = this.entities.get(this.#selector.value);
             if (selected) {
-                this.display(selected);
+                this.#display(selected);
             }
         });
 
         // display first element
         for (const elem of this.entities.values()) {
-            this.display(elem);
+            this.#display(elem);
             break;
         }
     }
 
     show(entity: EntityElement): void {
-        this.selector.value = entity.name;
-        this.display(entity);
+        this.#selector.value = entity.name;
+        this.#display(entity);
     }
 
-    private display(entity: EntityElement): void {
+    #display(entity: EntityElement): void {
         this.diagram.clear();
 
         entity.compact(false);
@@ -401,7 +405,7 @@ class SpectralEntityDiagram extends EntityDiagram {
 /**
  * An interface that prevents name mangling for factory functions when TypeScript code is fed to the Closure Compiler.
  */
-declare interface EntityRelationshipFactory {
+export declare interface EntityRelationshipFactory {
     createElasticDiagram(elem: HTMLElement, data: EntityRelationshipData, options: ElasticLayoutOptions): ElasticEntityDiagram;
     createNavigableDiagram(elem: HTMLElement, data: EntityRelationshipData): NavigableEntityDiagram;
     createSpectralDiagram(elem: HTMLElement, data: EntityRelationshipData): SpectralEntityDiagram;
@@ -424,10 +428,6 @@ class EntityRelationshipFactoryImpl implements EntityRelationshipFactory {
     }
 }
 
-declare global {
-    interface Window { erd: any, TabPanel: any; }
-}
-
 const btnDownload = document.querySelector(".actions .btn-download");
 if (btnDownload) {
     btnDownload.addEventListener("click", () => {
@@ -438,6 +438,10 @@ if (btnDownload) {
     });
 }
 
+export const erd: EntityRelationshipFactory = new EntityRelationshipFactoryImpl();
+
 // export symbols to caller domain (necessary in Closure Compiler context)
-window["erd"] = new EntityRelationshipFactoryImpl();
-window["TabPanel"] = TabPanel;
+declare global {
+    interface Window { erd: any; }
+}
+window["erd"] = erd;

@@ -8,16 +8,16 @@
  **/
 
 export class Toolbar {
-    private elem: HTMLElement;
+    #elem: HTMLElement;
 
     public get element(): HTMLElement {
-        return this.elem;
+        return this.#elem;
     }
 
     constructor() {
         const elem = document.createElement("div");
         elem.classList.add("toolbar");
-        this.elem = elem;
+        this.#elem = elem;
     }
 
     add(name: string, title: string, action: () => void): void {
@@ -29,6 +29,6 @@ export class Toolbar {
         icon.classList.add(name);
         button.append(icon);
         button.addEventListener("click", action);
-        this.elem.append(button);
+        this.#elem.append(button);
     }
 }

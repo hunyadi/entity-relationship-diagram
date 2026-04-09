@@ -8,14 +8,14 @@
  **/
 
 export default class TabPanel {
-    private view: HTMLElement;
-    private selector: HTMLElement;
+    #view: HTMLElement;
+    #selector: HTMLElement;
 
     constructor(panel: HTMLElement) {
-        this.view = panel.querySelector(".tab-view")!;
+        this.#view = panel.querySelector(".tab-view")!;
 
-        this.selector = panel.querySelector(".tab-selector")!;
-        for (let child of this.selector.children) {
+        this.#selector = panel.querySelector(".tab-selector")!;
+        for (let child of this.#selector.children) {
             child.addEventListener("click", event => {
                 const selected = event.target as HTMLElement;
                 this.activateByName(selected.dataset["tab"]);
@@ -25,20 +25,20 @@ export default class TabPanel {
     }
 
     activateByIndex(index: number) {
-        this.deactivateTabs();
-        const tab = this.selector.children[index];
-        const view = this.view.children[index];
-        this.activateTab(tab, view);
+        this.#deactivateTabs();
+        const tab = this.#selector.children[index];
+        const view = this.#view.children[index];
+        this.#activateTab(tab, view);
     }
 
     activateByName(tag: string | undefined) {
-        this.deactivateTabs();
-        const tab = this.selector.querySelector('[data-tab="' + tag + '"]');
-        const view = this.view.querySelector('[data-tab="' + tag + '"]');
-        this.activateTab(tab, view);
+        this.#deactivateTabs();
+        const tab = this.#selector.querySelector('[data-tab="' + tag + '"]');
+        const view = this.#view.querySelector('[data-tab="' + tag + '"]');
+        this.#activateTab(tab, view);
     }
 
-    private activateTab(tab: Element | null | undefined, view: Element | null | undefined) {
+    #activateTab(tab: Element | null | undefined, view: Element | null | undefined) {
         if (tab) {
             tab.classList.add("tab-active");
         }
@@ -47,11 +47,11 @@ export default class TabPanel {
         }
     }
 
-    private deactivateTabs() {
-        for (let child of this.selector.children) {
+    #deactivateTabs() {
+        for (let child of this.#selector.children) {
             child.classList.remove("tab-active");
         }
-        for (let child of this.view.children) {
+        for (let child of this.#view.children) {
             child.classList.remove("tab-active");
         }
     }
