@@ -1,6 +1,6 @@
 {
   "name": "entity-relationship-diagram",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "An HTML5 entity relationship diagram with entities as HTML elements and relationships as SVG Beziér curves. Items are arranged on a drawing canvas with a force-based or a spectral layout.",
   "keywords": [
     "entity",
